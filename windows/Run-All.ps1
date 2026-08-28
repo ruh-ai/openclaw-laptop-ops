@@ -18,7 +18,7 @@ function Gate($phase) {
     if ($LASTEXITCODE -ne 0) { Write-OpsLog -Level ERROR -Component runall -Message "Gate $phase FAILED"; Send-OpsSlack -Title "Setup stopped at Phase $phase gate" -Text (($out -split "`n" | Where-Object { $_ -match '^FAIL' }) -join "`n") -Severity danger | Out-Null; throw "Phase $phase gate failed - see FAIL lines above and RUNBOOK 'If something goes wrong'. Fix, then: .\windows\Run-All.ps1 -From $phase" }
     Write-OpsLog -Component runall -Message "Gate $phase PASS"
 }
-function Invoke-Phase($file) { $p = Join-Path $W $file; & $p; if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "$file exited $LASTEXITCODE" } }
+function Invoke-Phase($file) { $p = Join-Path $W $file; & $p; $global:LASTEXITCODE = 0 }   # phase scripts throw on failure; native exit codes inside them are not verdicts
 
 if (-not (Get-OpsState).intakeDone) { throw 'Run .\windows\Start-Run.ps1 first (one-time intake of secrets and names).' }
 if ($From -le 0 -and $To -ge 0) {
