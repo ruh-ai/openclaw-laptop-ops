@@ -9,8 +9,11 @@ while IFS= read -r line || [ -n "$line" ]; do
   line="${line%%$'\r'}"; [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
   [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
   k="${BASH_REMATCH[1]}"; v="${BASH_REMATCH[2]}"; v="${v%%[[:space:]]#*}"; v="${v%"${v##*[![:space:]]}"}"; v="${v#\"}"; v="${v%\"}"
-  export "$k=$v"
+  # plain shell variables, NOT exported: OPENCLAW_*/GATEWAY_* in the CLI's environment change where
+  # openclaw looks for config/token (caused token_mismatch on every RPC check - Linux bench 2026-08-28)
+  printf -v "$k" '%s' "$v"
 done < "$OPS_SITE_ENV"
+export -n OPENCLAW_HOME GATEWAY_PORT OPENCLAW_SERVICE OPS_OPENCLAW_INSTALL WSL_USER WSL_HOME 2>/dev/null || true
 : "${GATEWAY_PORT:=18789}"; : "${OPENCLAW_SERVICE:=openclaw-gateway.service}"; : "${OPENCLAW_HOME:=$HOME/.openclaw}"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export OPS_HOME="$HOME/.openclaw-ops"
