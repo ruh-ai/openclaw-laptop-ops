@@ -6,32 +6,33 @@ $site = Import-SiteConfig -AllowExample
 Initialize-OpsRoot | Out-Null
 $ts = Get-Date -Format 'yyyyMMdd-HHmmss'
 $rep = [ordered]@{}
-function Try($name, [scriptblock]$sb) { try { $rep[$name] = (& $sb) } catch { $rep[$name] = "ERROR: $($_.Exception.Message)" } }
+function Probe($name, [scriptblock]$sb) { try { $rep[$name] = (& $sb) } catch { $rep[$name] = "ERROR: $($_.Exception.Message)" } }
+function W { param([string[]]$WslArgs) $o = & wsl.exe @WslArgs 2>&1; return ((@($o) | ForEach-Object { "$_" }) -join "`n") -replace "`0", '' }
 
-Try 'windows' { [ordered]@{ caption = (Get-CimInstance Win32_OperatingSystem).Caption; version = [Environment]::OSVersion.Version.ToString(); build = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').DisplayVersion; computer = $env:COMPUTERNAME; user = "$env:USERDOMAIN\$env:USERNAME"; isAdmin = (Test-IsAdmin); lastBoot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToString('o') } }
-Try 'hardware' { $cs = Get-CimInstance Win32_ComputerSystem; $bat = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue; [ordered]@{ model = "$($cs.Manufacturer) $($cs.Model)"; ramGB = [math]::Round($cs.TotalPhysicalMemory / 1GB, 1); cpu = (Get-CimInstance Win32_Processor).Name; battery = [bool]$bat; onAC = if ($bat) { $bat.BatteryStatus -eq 2 } else { $true } } }
-Try 'disk' { Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -ne $null } | ForEach-Object { [ordered]@{ drive = $_.Name; freeGB = [math]::Round($_.Free / 1GB, 1); usedPct = [math]::Round(100 * $_.Used / ($_.Used + $_.Free), 0) } } }
-Try 'power' { (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE | Select-String 'AC Power Setting Index').ToString().Trim() }
-Try 'wsl.version' { (& wsl.exe --version 2>&1) -replace "`0", '' -join "`n" }
-Try 'wsl.status' { (& wsl.exe --status 2>&1) -replace "`0", '' -join "`n" }
-Try 'wsl.distros' { (& wsl.exe -l -v 2>&1) -replace "`0", '' -join "`n" }
-Try 'wsl.running' { (& wsl.exe -l --running 2>&1) -replace "`0", '' -join "`n" }
-Try 'wsl.registryOwner' { Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue | ForEach-Object { $p = Get-ItemProperty $_.PSPath; [ordered]@{ name = $p.DistributionName; basePath = $p.BasePath; defaultUid = $p.DefaultUid; ownerWinUser = $env:USERNAME } } }
-Try 'wslconfig' { $f = Join-Path $env:USERPROFILE '.wslconfig'; if (Test-Path $f) { Get-Content $f -Raw } else { '(none)' } }
-Try 'tailscale' { $exe = Get-TailscaleExe; if ($exe) { [ordered]@{ exe = $exe; version = (& $exe version 2>&1 | Select-Object -First 1); status = (& $exe status --json 2>&1 | Out-String) } } else { 'not installed' } }
-Try 'sshd' { $s = Get-Service sshd -ErrorAction SilentlyContinue; if ($s) { [ordered]@{ status = $s.Status.ToString(); startType = $s.StartType.ToString() } } else { 'not installed' } }
-Try 'teamviewer' { $s = Get-Service TeamViewer -ErrorAction SilentlyContinue; if ($s) { $s.Status.ToString() } else { 'service not found' } }
-Try 'listeners' { Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort) pid=$($_.OwningProcess)" } }
-Try 'scheduledTasks' { Get-ScheduledTask -TaskName 'OpenClawOps-*', 'WSL*' -ErrorAction SilentlyContinue | ForEach-Object { "$($_.TaskName) [$($_.State)] as $($_.Principal.UserId)" } }
-Try 'node' { (& node --version 2>&1); (& npm --version 2>&1) }
-Try 'agents' { [ordered]@{ codex = [bool](Get-Command codex -ErrorAction SilentlyContinue); claude = [bool](Get-Command claude -ErrorAction SilentlyContinue) } }
+Probe 'windows' { [ordered]@{ caption = (Get-CimInstance Win32_OperatingSystem).Caption; version = [Environment]::OSVersion.Version.ToString(); build = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').DisplayVersion; computer = $env:COMPUTERNAME; user = "$env:USERDOMAIN\$env:USERNAME"; isAdmin = (Test-IsAdmin); lastBoot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToString('o') } }
+Probe 'hardware' { $cs = Get-CimInstance Win32_ComputerSystem; $bat = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue; [ordered]@{ model = "$($cs.Manufacturer) $($cs.Model)"; ramGB = [math]::Round($cs.TotalPhysicalMemory / 1GB, 1); cpu = (Get-CimInstance Win32_Processor).Name; battery = [bool]$bat; onAC = if ($bat) { $bat.BatteryStatus -eq 2 } else { $true } } }
+Probe 'disk' { Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -ne $null } | ForEach-Object { [ordered]@{ drive = $_.Name; freeGB = [math]::Round($_.Free / 1GB, 1); usedPct = [math]::Round(100 * $_.Used / ($_.Used + $_.Free), 0) } } }
+Probe 'power' { (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE | Select-String 'AC Power Setting Index').ToString().Trim() }
+Probe 'wsl.version' { W @('--version') }
+Probe 'wsl.status' { W @('--status') }
+Probe 'wsl.distros' { W @('-l','-v') }
+Probe 'wsl.running' { W @('-l','--running') }
+Probe 'wsl.registryOwner' { Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue | ForEach-Object { $p = Get-ItemProperty $_.PSPath; [ordered]@{ name = $p.DistributionName; basePath = $p.BasePath; defaultUid = $p.DefaultUid; ownerWinUser = $env:USERNAME } } }
+Probe 'wslconfig' { $f = Join-Path $env:USERPROFILE '.wslconfig'; if (Test-Path $f) { Get-Content $f -Raw } else { '(none)' } }
+Probe 'tailscale' { $exe = Get-TailscaleExe; if ($exe) { [ordered]@{ exe = $exe; version = (& $exe version 2>&1 | Select-Object -First 1); status = (& $exe status --json 2>&1 | Out-String) } } else { 'not installed' } }
+Probe 'sshd' { $s = Get-Service sshd -ErrorAction SilentlyContinue; if ($s) { [ordered]@{ status = $s.Status.ToString(); startType = $s.StartType.ToString() } } else { 'not installed' } }
+Probe 'teamviewer' { $s = Get-Service TeamViewer -ErrorAction SilentlyContinue; if ($s) { $s.Status.ToString() } else { 'service not found' } }
+Probe 'listeners' { Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort) pid=$($_.OwningProcess)" } }
+Probe 'scheduledTasks' { Get-ScheduledTask -TaskName 'OpenClawOps-*', 'WSL*' -ErrorAction SilentlyContinue | ForEach-Object { "$($_.TaskName) [$($_.State)] as $($_.Principal.UserId)" } }
+Probe 'node' { (& node --version 2>&1); (& npm --version 2>&1) }
+Probe 'agents' { [ordered]@{ codex = [bool](Get-Command codex -ErrorAction SilentlyContinue); claude = [bool](Get-Command claude -ErrorAction SilentlyContinue) } }
 
 # Inside WSL (only if a distro is present and site.env names it)
 $distro = $site['DISTRO']
 $distroList = "$($rep['wsl.distros'])"
 if ($distro -and $distroList -match [regex]::Escape($distro)) {
     $global:Site['WSL_USER'] = 'root'
-    Try 'wsl.inside' {
+    Probe 'wsl.inside' {
         $cmd = @'
 echo "os=$(. /etc/os-release && echo $PRETTY_NAME)"; echo "kernel=$(uname -r)"; echo "systemd_pid1=$(ps -p 1 -o comm=)"
 echo "wslconf=$(cat /etc/wsl.conf 2>/dev/null | tr '\n' ';')"; echo "users=$(awk -F: '$3>=1000 && $3<65534 {print $1}' /etc/passwd | tr '\n' ' ')"

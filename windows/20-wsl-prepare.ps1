@@ -54,7 +54,7 @@ PY
 grep -q 'systemd=true' /etc/wsl.conf || { printf '\n[boot]\nsystemd=true\n[user]\ndefault=$wuser\n' >> /etc/wsl.conf; echo 'wsl.conf appended'; }
 command -v dbus-launch >/dev/null || { apt-get update -qq && apt-get install -y -qq dbus-x11 >/dev/null; echo 'dbus-x11 installed'; }
 loginctl enable-linger '$wuser' 2>/dev/null || true
-echo "pid1=\$(ps -p 1 -o comm=)"
+echo "pid1=`$(ps -p 1 -o comm=)"
 "@
 $r = Invoke-WslBash -Command $script -AsRoot -TimeoutSec 600
 Write-Host $r.Output

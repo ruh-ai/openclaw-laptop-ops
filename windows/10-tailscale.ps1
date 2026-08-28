@@ -31,17 +31,17 @@ $state = if ($status -match '"BackendState":\s*"([^"]+)"') { $Matches[1] } else 
 Write-OpsLog -Component tailscale -Message "BackendState=$state"
 
 if ($state -ne 'Running') {
-    $args = @('up', '--unattended', "--hostname=$($site['TS_HOSTNAME'])", '--accept-dns=true', '--reset')
-    if ($site['TS_TAGS']) { $args += "--advertise-tags=$($site['TS_TAGS'])" }
+    $upArgs = @('up', '--unattended', "--hostname=$($site['TS_HOSTNAME'])", '--accept-dns=true', '--reset')
+    if ($site['TS_TAGS']) { $upArgs += "--advertise-tags=$($site['TS_TAGS'])" }
     if (-not $NoAuthKey) {
         Write-Host '[HUMAN AT CONSOLE] Paste the Tailscale auth key (tskey-auth-...). Input hidden. Press Enter with no input to log in interactively via browser instead.' -ForegroundColor Yellow
         $k = Read-Host -AsSecureString
         $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($k); try { $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
-        if ($plain) { $args += "--auth-key=$plain" }
+        if ($plain) { $upArgs += "--auth-key=$plain" }
     }
     Write-OpsLog -Component tailscale -Message "tailscale up (unattended, hostname=$($site['TS_HOSTNAME']), tags=$($site['TS_TAGS']))"
-    & $exe @args
-    $plain = $null; $args = $null
+    & $exe @upArgs
+    $plain = $null; $upArgs = $null
     if ($LASTEXITCODE -ne 0) { throw "tailscale up failed (exit $LASTEXITCODE). If it printed a login URL, the human must open it; then re-run this script." }
     $changed += 'tailscale up --unattended'
 } else {

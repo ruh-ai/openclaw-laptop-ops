@@ -13,10 +13,10 @@ if (-not $SkipInstall) {
     if ($r.ExitCode -ne 0) { throw "wsl/10-openclaw-service.sh failed (exit $($r.ExitCode))" }
     $changed += 'openclaw installed/verified; systemd user service enabled'
 }
-$args = @()
-if ($site['TS_URL']) { $args += "--origin=$($site['TS_URL'])" }
-if ($ProxySource) { $args += "--trusted-proxy=$ProxySource" }
-$r = Invoke-WslScript -Script 'wsl/20-harden-config.sh' -Arguments $args -TimeoutSec 600
+$hardenArgs = @()
+if ($site['TS_URL']) { $hardenArgs += "--origin=$($site['TS_URL'])" }
+if ($ProxySource) { $hardenArgs += "--trusted-proxy=$ProxySource" }
+$r = Invoke-WslScript -Script 'wsl/20-harden-config.sh' -Arguments $hardenArgs -TimeoutSec 600
 Write-Host $r.Output
 if ($r.ExitCode -ne 0) { throw "wsl/20-harden-config.sh failed (exit $($r.ExitCode))" }
 $changed += 'gateway config hardened (token auth, loopback bind, allowedOrigins' + $(if ($ProxySource) { ", trustedProxies=$ProxySource" } else { '' }) + ')'

@@ -52,8 +52,8 @@ try {
     }
     # Warnings (disk, internet, slack, teamviewer) — report once per day per warning
     foreach ($w in $health.warnings) {
-        $key = "warn:$w"; $last = if ($state.PSObject.Properties[$key]) { $state.$key } else { $null }
-        if (-not $last -or ([datetime]$last -lt (Get-Date).AddHours(-24))) { Send-OpsSlack -Title "Warning: $w" -Text $health.checks.$w.detail -Severity warning | Out-Null; $state | Add-Member -NotePropertyName $key -NotePropertyValue (Get-Date).ToString('o') -Force }
+        $key = "warn:$w"; $last = if ($state.Contains($key)) { $state[$key] } else { $null }
+        if (-not $last -or ([datetime]$last -lt (Get-Date).AddHours(-24))) { Send-OpsSlack -Title "Warning: $w" -Text $health.checks.$w.detail -Severity warning | Out-Null; $state[$key] = (Get-Date).ToString('o') }
     }
     # Daily summary 09:00
     if ((Get-Date).Hour -eq 9 -and (Get-Date).Minute -lt [int]$site['SUPERVISOR_INTERVAL_MIN']) {

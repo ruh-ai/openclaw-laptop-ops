@@ -22,7 +22,7 @@ Send-OpsSlack -Title 'Failure confirmed' -Text "Failing: $failing" -Severity dan
 if ($mode -eq 'observe') { Write-OpsLog -Component recovery -Message 'RECOVERY_MODE=observe — no action taken'; return 'observe' }
 
 # Step 2: restart gateway service
-if (Test-WslRunning -and ($Health.critical -contains 'gateway.service' -or $Health.critical -contains 'gateway.rpc' -or $Health.critical -contains 'gateway.port.windows')) {
+if ((Test-WslRunning) -and ($Health.critical -contains 'gateway.service' -or $Health.critical -contains 'gateway.rpc' -or $Health.critical -contains 'gateway.port.windows')) {
     Send-OpsSlack -Title 'Recovery step: restart gateway' -Severity warning | Out-Null
     Invoke-WslBash -Command "systemctl --user restart $($site['OPENCLAW_SERVICE']) && sleep 8 && openclaw gateway status --require-rpc" -TimeoutSec 120 | Out-Null
     if (Check) { Send-OpsSlack -Title 'Recovered by gateway restart' -Severity good | Out-Null; return 'restart-gateway' }

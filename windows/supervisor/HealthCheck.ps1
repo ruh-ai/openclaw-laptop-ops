@@ -52,7 +52,7 @@ function Get-Health {
     return $h
 }
 $health = Get-Health -Deep:$Deep
-if ($Json) { $health | ConvertTo-Json -Depth 6 } else {
+if ($Json) { $health | ConvertTo-Json -Depth 6 -Compress } else {
     foreach ($k in $health.checks.Keys) { $c = $health.checks[$k]; $mark = if ($c.ok) { 'OK  ' } elseif ($k -in $health.warnings) { 'WARN' } else { 'FAIL' }; Write-Host ("{0} {1,-24} {2}" -f $mark, $k, $c.detail) -ForegroundColor $(if ($c.ok) { 'Green' } elseif ($mark -eq 'WARN') { 'Yellow' } else { 'Red' }) }
     Write-Host ("HEALTHY: {0}" -f $health.healthy) -ForegroundColor $(if ($health.healthy) { 'Green' } else { 'Red' })
 }

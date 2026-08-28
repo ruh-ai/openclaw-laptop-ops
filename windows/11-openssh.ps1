@@ -43,9 +43,9 @@ foreach ($f in $pubs) {
     $isAdmin = [bool](Get-LocalGroupMember -Group Administrators -Member $user -ErrorAction SilentlyContinue)
     if ($isAdmin) { $adminSet.Add("$key $($f.BaseName)") }
     else {
-        $home = (Get-CimInstance Win32_UserProfile | Where-Object { $_.LocalPath -like "*\$user" }).LocalPath
-        if (-not $home) { $open += "no profile dir for $user — log in once, then re-run"; continue }
-        $ak = Join-Path $home '.ssh\authorized_keys'; New-Item -ItemType Directory -Path (Split-Path $ak) -Force | Out-Null
+        $profileDir = (Get-CimInstance Win32_UserProfile | Where-Object { $_.LocalPath -like "*\$user" }).LocalPath
+        if (-not $profileDir) { $open += "no profile dir for $user — log in once, then re-run"; continue }
+        $ak = Join-Path $profileDir '.ssh\authorized_keys'; New-Item -ItemType Directory -Path (Split-Path $ak) -Force | Out-Null
         if (-not (Test-Path $ak) -or -not ((Get-Content $ak -Raw) -match [regex]::Escape($key))) { Add-Content $ak "$key $($f.BaseName)"; $changed += "key $($f.Name) -> $ak" }
     }
     if ($user -ne $site['WIN_USER'] -and -not (Get-LocalGroupMember -Group $grp -Member $user -ErrorAction SilentlyContinue)) { Add-LocalGroupMember -Group $grp -Member $user; $changed += "$user added to $grp" }
