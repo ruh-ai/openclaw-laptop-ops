@@ -24,6 +24,14 @@ if ! have openclaw; then
   log INFO "openclaw installed: $(openclaw --version 2>/dev/null | head -1)"
 else log INFO "openclaw present: $(openclaw --version 2>/dev/null | head -1)"; fi
 
+# Fresh install: the gateway refuses to start with no config (exit 78: "Missing config ... set gateway.mode=local").
+# Seed a minimal local-mode config; 20-harden-config.sh then adds auth/bind/origins on top.
+mkdir -p "$OPENCLAW_HOME"; chmod 700 "$OPENCLAW_HOME"
+if [ ! -s "$OPENCLAW_HOME/openclaw.json" ]; then
+  printf '{\n  "gateway": { "mode": "local" }\n}\n' > "$OPENCLAW_HOME/openclaw.json"
+  log INFO "seeded minimal openclaw.json (gateway.mode=local)"
+fi
+
 unit="$HOME/.config/systemd/user/$OPENCLAW_SERVICE"
 if [ ! -f "$unit" ]; then log INFO "openclaw gateway install"; openclaw gateway install || die "openclaw gateway install failed"; fi
 [ -f "$unit" ] || die "unit $unit not created"
