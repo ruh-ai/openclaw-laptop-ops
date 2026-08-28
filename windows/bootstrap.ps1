@@ -1,7 +1,7 @@
 ﻿<# =====================================================================================
  bootstrap.ps1 - FIRST thing to run on the laptop (elevated PowerShell). Idempotent.
    1. winget: Git, Node LTS (needed for codex/claude CLIs and OpenClaw tooling)
-   2. Clone/refresh this repo to REPO_DIR_WIN using a read-only GitHub PAT typed live (private repo)
+   2. Clone/refresh this repo to REPO_DIR_WIN (public repo: anonymous clone; falls back to a PAT prompt for private forks)
    3. Create %OPS_ROOT_WIN% tree with restricted ACL
    4. Install the agent CLIs: @openai/codex and @anthropic-ai/claude-code (npm -g)
    5. Copy config\site.env.example -> config\site.env if missing
@@ -11,7 +11,8 @@ param(
     [string]$RepoUrl = 'https://github.com/ruh-ai/openclaw-laptop-ops.git',
     [string]$RepoDir = 'C:\openclaw-laptop-ops',
     [string]$Branch = 'main',
-    [switch]$SkipAgents
+    [switch]$SkipAgents,
+    [switch]$Private     # repo is public; pass -Private (or it auto-falls-back) if you are using a private fork
 )
 $ErrorActionPreference = 'Stop'
 function Step($m) { Write-Host "`n==> $m" -ForegroundColor Cyan }
@@ -31,16 +32,27 @@ if (Test-Path (Join-Path $RepoDir '.git')) {
     git -C $RepoDir fetch --quiet origin; git -C $RepoDir checkout --quiet $Branch; git -C $RepoDir pull --quiet --ff-only origin $Branch
     Write-Host '  refreshed'
 } else {
-    Write-Host '[HUMAN AT CONSOLE] The repo is private. Paste the read-only GitHub PAT (fine-grained, Contents:read on ruh-ai/openclaw-laptop-ops). Input hidden.' -ForegroundColor Yellow
-    $pat = Read-Host -AsSecureString
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($pat)
-    try { $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
-    $authUrl = $RepoUrl -replace '^https://', "https://x-access-token:$plain@"
-    git clone --quiet --branch $Branch $authUrl $RepoDir
-    $plain = $null
-    # strip the token from the stored remote; future pulls prompt via Git Credential Manager or re-run bootstrap
-    git -C $RepoDir remote set-url origin $RepoUrl
-    Write-Host '  cloned (token removed from remote URL)'
+    $cloned = $false
+    if (-not $Private) {
+        $env:GIT_TERMINAL_PROMPT = '0'
+        git clone --quiet --branch $Branch $RepoUrl $RepoDir 2>$null
+        if ($LASTEXITCODE -eq 0 -and (Test-Path (Join-Path $RepoDir '.git'))) { $cloned = $true; Write-Host '  cloned (public)' }
+        else { Write-Host '  anonymous clone failed - falling back to token clone' -ForegroundColor Yellow; Remove-Item $RepoDir -Recurse -Force -ErrorAction SilentlyContinue }
+        Remove-Item Env:GIT_TERMINAL_PROMPT -ErrorAction SilentlyContinue
+    }
+    if (-not $cloned) {
+        Write-Host '[HUMAN AT CONSOLE] Paste a read-only GitHub PAT (fine-grained, Contents:read on this repo). Input hidden.' -ForegroundColor Yellow
+        $pat = Read-Host -AsSecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($pat)
+        try { $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+        $authUrl = $RepoUrl -replace '^https://', "https://x-access-token:$plain@"
+        git clone --quiet --branch $Branch $authUrl $RepoDir
+        $plain = $null
+        if ($LASTEXITCODE -ne 0) { throw 'git clone failed' }
+        # strip the token from the stored remote; future pulls prompt via Git Credential Manager or re-run bootstrap
+        git -C $RepoDir remote set-url origin $RepoUrl
+        Write-Host '  cloned (token removed from remote URL)'
+    }
 }
 git -C $RepoDir config core.autocrlf false | Out-Null
 

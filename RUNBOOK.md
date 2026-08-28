@@ -23,7 +23,6 @@ Every script prints `PHASE n PASS|FAIL / changed / verified / open`. **Stop afte
 - [ ] Tailscale admin console: **MagicDNS on**, **HTTPS certificates on** (DNS tab); ACL includes `tag:openclaw-laptop` + operators (see `config/tailscale-acl.example.hujson`); generate an **auth key**: reusable=no, ephemeral=no, pre-approved=yes, tags=`tag:openclaw-laptop`. Keep it in your password manager; you'll type it once.
 - [ ] Both operators' SSH public keys committed under `config/operators/` (see its README).
 - [ ] Slack: create an incoming webhook for the alert channel. Keep the URL ready to type.
-- [ ] GitHub: fine-grained **read-only PAT** for `ruh-ai/openclaw-laptop-ops` (Contents: read), 7-day expiry. Needed for the clone.
 - [ ] Know the laptop's Windows username/password owner (the client must type the password for scheduled tasks).
 - [ ] Decide `RECOVERY_MODE` stays `observe` tonight (it does).
 
@@ -31,10 +30,10 @@ Every script prints `PHASE n PASS|FAIL / changed / verified / open`. **Stop afte
 1. Human on TeamViewer opens **PowerShell as Administrator** and pastes:
    ```powershell
    Set-ExecutionPolicy -Scope Process Bypass -Force
-   irm https://raw.githubusercontent.com/ruh-ai/openclaw-laptop-ops/main/windows/bootstrap.ps1 -Headers @{Authorization="Bearer $(Read-Host 'GitHub PAT')"} | iex
+   irm https://raw.githubusercontent.com/ruh-ai/openclaw-laptop-ops/main/windows/bootstrap.ps1 | iex
    ```
-   (Private repo: the PAT is read once for the raw download, then bootstrap asks for it again for `git clone`, then strips it from the remote URL.
-   Verified 2026-08-28 against this repo: raw.githubusercontent.com accepts `Authorization: Bearer <token>` (and `token <token>`); the clone URL form `https://x-access-token:<token>@github.com/ruh-ai/openclaw-laptop-ops` works.)
+   (The repo is public: no token needed. If you are using a **private fork**, add `-Headers @{Authorization="Bearer $(Read-Host 'GitHub PAT')"}` to `irm`;
+   bootstrap then prompts for the same read-only PAT for `git clone` and strips it from the remote URL. Both schemes were verified 2026-08-28.)
    Fallback if `irm` is blocked: copy `windows\bootstrap.ps1` via TeamViewer file transfer and run `powershell -ExecutionPolicy Bypass -File .\bootstrap.ps1`.
 2. `cd C:\openclaw-laptop-ops` then start the agent: `codex` (or `claude`). First prompt: *"Read AGENTS.md and RUNBOOK.md. We are at Phase 0. Go."*
 3. Agent: `.\windows\00-discovery.ps1 -WriteSiteEnv` → read the report path it prints; open `config\site.env` and verify each `VERIFY-ON-SITE` value against the report:

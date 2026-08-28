@@ -19,7 +19,7 @@ tests/                  acceptance matrix + fault injectors
 ## Start (on the laptop, elevated PowerShell)
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
-irm https://raw.githubusercontent.com/ruh-ai/openclaw-laptop-ops/main/windows/bootstrap.ps1 -Headers @{Authorization="Bearer $(Read-Host 'GitHub PAT')"} | iex
+irm https://raw.githubusercontent.com/ruh-ai/openclaw-laptop-ops/main/windows/bootstrap.ps1 | iex
 cd C:\openclaw-laptop-ops
 codex   # or: claude
 # > Read AGENTS.md and RUNBOOK.md. We are at Phase 0. Go.

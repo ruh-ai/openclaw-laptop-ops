@@ -5,7 +5,7 @@
     "tag:openclaw-laptop": ["autogroup:admin"],
   },
   "groups": {
-    "group:openclaw-operators": ["prasanjit@ruh.ai", "second-developer@ruh.ai"],
+    "group:openclaw-operators": ["operator-one@example.com", "operator-two@example.com"],
   },
   "acls": [
     // operators -> laptop: SSH (Windows OpenSSH) and HTTPS (Tailscale Serve -> OpenClaw UI/Gateway)

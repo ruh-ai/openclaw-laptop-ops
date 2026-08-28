@@ -23,7 +23,7 @@ scripts in `windows/` and `wsl/`. You are not here to design; the design is done
    `OpenClawOps-*`, TeamViewer, and `windows\lib\Common.psm1`. The AI repair runner (`wsl/repair/`) is sandboxed to
    the `WSL_USER` Linux account and can't reach them; **you** can, so you must not.
 3. **Secrets never touch this repo, logs, Slack, or your transcript.** Tailscale auth key, Slack webhook, gateway token,
-   API keys, GitHub PAT, Windows passwords: when a script needs one it prompts (`Read-Host -AsSecureString`) — hand the
+   API keys, GitHub PAT (private forks only), Windows passwords: when a script needs one it prompts (`Read-Host -AsSecureString`) — hand the
    keyboard to the human. If you see a secret in output, do not repeat it.
 4. **No reboots, `wsl --shutdown`, or WSL re-registration outside the steps that call for them** — and those steps
    require the human to confirm TeamViewer will survive it (Phase 1 gate proves SSH-over-Tailscale first).
