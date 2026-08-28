@@ -1,0 +1,5 @@
+[Unit]
+Description=openclaw-ops local health probe (appends one JSON line to __OPS_HOME__/logs/health.jsonl)
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env bash -c 'bash __REPO__/wsl/healthcheck.sh --json >> __OPS_HOME__/logs/health.jsonl 2>/dev/null; tail -n 5000 __OPS_HOME__/logs/health.jsonl > __OPS_HOME__/logs/health.tmp && mv __OPS_HOME__/logs/health.tmp __OPS_HOME__/logs/health.jsonl'

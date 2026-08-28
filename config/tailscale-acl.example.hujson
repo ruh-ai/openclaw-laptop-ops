@@ -1,0 +1,17 @@
+// Tailscale ACL (admin console > Access controls). Example: two operators reach only this laptop's SSH + Serve HTTPS.
+// Adjust user logins and tag name (TS_TAGS in site.env). Serve traffic to the device is tailnet-internal; the ACL still must allow it.
+{
+  "tagOwners": {
+    "tag:openclaw-laptop": ["autogroup:admin"],
+  },
+  "groups": {
+    "group:openclaw-operators": ["prasanjit@ruh.ai", "second-developer@ruh.ai"],
+  },
+  "acls": [
+    // operators -> laptop: SSH (Windows OpenSSH) and HTTPS (Tailscale Serve -> OpenClaw UI/Gateway)
+    { "action": "accept", "src": ["group:openclaw-operators"], "dst": ["tag:openclaw-laptop:22,443"] },
+    // the laptop needs nothing inbound from anyone else; outbound is not governed here.
+  ],
+  // Tailscale SSH is NOT used (Windows OpenSSH is). Keep "ssh" empty.
+  "ssh": [],
+}

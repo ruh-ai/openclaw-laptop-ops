@@ -1,0 +1,11 @@
+# Never commit machine state or secrets
+reports/
+*.local.env
+site.env
+!site.env.example
+*.xml
+*.tskey*
+*.pem
+*.key
+!*.pub
+.DS_Store
