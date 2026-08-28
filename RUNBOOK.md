@@ -12,7 +12,22 @@ Rules: `AGENTS.md`. Design: `ARCHITECTURE.md`. Tests: `tests/ACCEPTANCE.md`. Mac
 | 4 | Supervision (observe), power, backups, **reboot test** | `90-verify.ps1 -Phase 4` + live reboot recovers | TONIGHT |
 | 5 | Escalate: `restart` mode → `repair` mode + fault tests | `90-verify.ps1 -Phase 5` + `tests/ACCEPTANCE.md` LATER rows | LATER (≥24h observe) |
 
-Every script prints `PHASE n PASS|FAIL / changed / verified / open`. **Stop after each phase and wait for "continue".**
+## FAST PATH (recommended) - three commands, ~30-60 min wall clock, one place where you type secrets
+```powershell
+# 1. elevated PowerShell, as the Windows account that owns the WSL distro
+Set-ExecutionPolicy -Scope Process Bypass -Force
+irm https://raw.githubusercontent.com/ruh-ai/openclaw-laptop-ops/main/windows/bootstrap.ps1 | iex
+cd C:\openclaw-laptop-ops
+.\windows\Start-Run.ps1          # 2. intake: SITE_NAME, TS_HOSTNAME, Tailscale auth key, Slack webhook, Windows password - typed once, hidden
+codex --dangerously-bypass-approvals-and-sandbox      # 3. or: claude --dangerously-skip-permissions
+# > Autonomous mode. Run .\windows\Run-All.ps1 -Reboot and fix anything that stops it.
+```
+`Run-All.ps1` runs Phases 0-4 below without pausing, auto-gates each phase, auto-verifies SSH (self-connect over the tailnet IP) and the UI (HTTP on TS_URL) from the laptop, registers the tasks with the stored password (then deletes it), takes the first backup + export, runs a restore test, and with `-Reboot` restarts Windows so the boot sequence is proven while you are still on TeamViewer. The second-device checks (SSH from your Mac, pair the UI) are printed as a **post-run checklist** - do them while the laptop reboots. If a gate fails it prints the FAIL lines and the resume command (`Run-All.ps1 -From N`).
+Pre-call prep is unchanged (below). The phase-by-phase procedure that follows is the fallback / reference for fixing a failed gate.
+
+---
+
+Every script prints `PHASE n PASS|FAIL / changed / verified / open`. In the fast path Run-All handles this; in phase-by-phase mode, stop after each phase and wait for "continue".
 `[HUMAN AT CONSOLE]` = hand over the keyboard. Never type secrets yourself.
 
 ---

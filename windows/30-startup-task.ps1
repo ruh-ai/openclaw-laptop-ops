@@ -12,9 +12,12 @@ $changed = @(); $verified = @(); $open = @()
 $user = $site['WIN_USER']; if (-not $user) { throw 'WIN_USER empty in site.env' }
 if ($env:USERNAME -ne $user) { $open += "Running as $env:USERNAME, tasks will run as $user. DPAPI secrets (Slack) must have been set by $user." }
 $repo = $site['REPO_DIR_WIN']; $ps = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-Write-Host "[HUMAN AT CONSOLE] Enter the Windows password for '$user' (stored by Task Scheduler, not by this repo)." -ForegroundColor Yellow
-$cred = Get-Credential -UserName $user -Message "Password for $user (scheduled tasks run before login)"
-$pw = $cred.GetNetworkCredential().Password
+$pw = Get-OpsSecret -Name 'run-cred'   # pre-seeded by Start-Run.ps1 (autonomous mode); Run-All deletes it after this script
+if (-not $pw) {
+    Write-Host "[HUMAN AT CONSOLE] Enter the Windows password for '$user' (stored by Task Scheduler, not by this repo)." -ForegroundColor Yellow
+    $cred = Get-Credential -UserName $user -Message "Password for $user (scheduled tasks run before login)"
+    $pw = $cred.GetNetworkCredential().Password
+}
 
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 2) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 function Register($name, $action, $triggers, $limitMin) {
@@ -35,7 +38,7 @@ $t = [datetime]::ParseExact($site['BACKUP_NIGHTLY_TIME'], 'HH:mm', $null)
 Register 'OpenClawOps-BackupNightly' (New-ScheduledTaskAction -Execute $ps -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$repo\windows\backup\Backup-OpenClaw.ps1`"" -WorkingDirectory $repo) @((New-ScheduledTaskTrigger -Daily -At $t)) 60
 $t2 = [datetime]::ParseExact($site['WSL_EXPORT_TIME'], 'HH:mm', $null)
 Register 'OpenClawOps-WslExportWeekly' (New-ScheduledTaskAction -Execute $ps -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$repo\windows\backup\Export-Wsl.ps1`"" -WorkingDirectory $repo) @((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $site['WSL_EXPORT_DAY'] -At $t2)) 120
-$pw = $null; $cred = $null
+$pw = $null; $cred = $null; Remove-Item (Get-OpsSecretPath 'run-cred') -Force -ErrorAction SilentlyContinue
 
 foreach ($n in 'OpenClawOps-WSLBoot', 'OpenClawOps-Supervisor', 'OpenClawOps-BackupNightly', 'OpenClawOps-WslExportWeekly') {
     $tk = Get-ScheduledTask -TaskName $n -ErrorAction SilentlyContinue

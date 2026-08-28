@@ -18,7 +18,7 @@ function Run-Gate {
     if ($Phase -ge 1) {
         HC 'tailscale.service'; HC 'tailscale.backend'; HC 'sshd'
         $fw = Get-NetFirewallRule -Name 'OpenClawOps-SSH-Tailnet' -ErrorAction SilentlyContinue; G 'firewall.ssh.tailnet-only' ($fw -and $fw.Enabled -eq 'True' -and (Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue).Enabled -ne 'True') 'OpenClawOps-SSH-Tailnet on, stock rule off'
-        G 'ssh.remote.human-confirmed' ([bool]$state.humanConfirmedRemoteSsh) "$(if($state.humanConfirmedRemoteSsh){$state.humanConfirmedRemoteSsh}else{'run: 90-verify.ps1 -Phase 1 -ConfirmRemoteSsh after ssh from a 2nd tailnet device works'})"
+        G 'ssh.reachable' ([bool]$state.humanConfirmedRemoteSsh -or [bool]$state.autoVerifiedSelfSsh) "$(if($state.humanConfirmedRemoteSsh){"remote, human-confirmed $($state.humanConfirmedRemoteSsh)"}elseif($state.autoVerifiedSelfSsh){"self-SSH over tailnet IP auto-verified $($state.autoVerifiedSelfSsh); remote check is on the post-run list"}else{'run Run-All.ps1 (auto) or 90-verify.ps1 -Phase 1 -ConfirmRemoteSsh after ssh from a 2nd device'})"
         HC 'teamviewer'
     }
     if ($Phase -ge 2) { HC 'wsl.running'; HC 'wsl.systemd'; HC 'gateway.service'; HC 'gateway.rpc'; HC 'gateway.port.windows'
@@ -26,7 +26,7 @@ function Run-Gate {
         $tok = Invoke-WslBash -Command "grep -q '^OPENCLAW_GATEWAY_TOKEN=' '$($site['OPENCLAW_HOME'])/.env' && stat -c %a '$($site['OPENCLAW_HOME'])/.env'"; G 'gateway.token.in-env-600' ($tok.Output.Trim() -eq '600') "mode $($tok.Output.Trim())" }
     if ($Phase -ge 3) { HC 'tailscale.serve'; HC 'gateway.http.tailnet'
         $cfg = Invoke-WslBash -Command "openclaw config get gateway.controlUi.allowedOrigins 2>/dev/null || grep -o 'allowedOrigins[^]]*]' '$($site['OPENCLAW_HOME'])/openclaw.json'"; G 'gateway.allowedOrigins' ($cfg.Output -match [regex]::Escape($site['TS_URL'])) $cfg.Output.Trim()
-        G 'ui.paired.human-confirmed' ([bool]$state.humanConfirmedUiPaired) "$(if($state.humanConfirmedUiPaired){$state.humanConfirmedUiPaired}else{'run: 90-verify.ps1 -Phase 3 -ConfirmUiPaired after the Control UI pairs from a 2nd device'})" }
+        G 'ui.reachable' ([bool]$state.humanConfirmedUiPaired -or [bool]$state.autoVerifiedUiHttp) "$(if($state.humanConfirmedUiPaired){"paired, human-confirmed $($state.humanConfirmedUiPaired)"}elseif($state.autoVerifiedUiHttp){"TS_URL HTTP auto-verified $($state.autoVerifiedUiHttp); pairing is on the post-run list"}else{'run Run-All.ps1 (auto) or 90-verify.ps1 -Phase 3 -ConfirmUiPaired after the Control UI pairs from a 2nd device'})" }
     if ($Phase -ge 4) {
         foreach ($n in 'OpenClawOps-WSLBoot', 'OpenClawOps-Supervisor', 'OpenClawOps-BackupNightly', 'OpenClawOps-WslExportWeekly') { $t = Get-ScheduledTask -TaskName $n -ErrorAction SilentlyContinue; G "task.$n" ($t -and $t.State -ne 'Disabled' -and $t.Principal.UserId -like "*$($site['WIN_USER'])") "$(if($t){"$($t.State) as $($t.Principal.UserId)"}else{'missing'})" }
         $lc = if ($state.lastCheck) { ((Get-Date) - [datetime]$state.lastCheck).TotalMinutes } else { 9999 }; G 'supervisor.recent' ($lc -lt 3) "last cycle $([math]::Round($lc,1)) min ago"

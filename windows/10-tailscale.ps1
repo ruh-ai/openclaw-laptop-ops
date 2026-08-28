@@ -33,10 +33,14 @@ Write-OpsLog -Component tailscale -Message "BackendState=$state"
 if ($state -ne 'Running') {
     $upArgs = @('up', '--unattended', "--hostname=$($site['TS_HOSTNAME'])", '--accept-dns=true', '--reset')
     if ($site['TS_TAGS']) { $upArgs += "--advertise-tags=$($site['TS_TAGS'])" }
+    $plain = $null
     if (-not $NoAuthKey) {
-        Write-Host '[HUMAN AT CONSOLE] Paste the Tailscale auth key (tskey-auth-...). Input hidden. Press Enter with no input to log in interactively via browser instead.' -ForegroundColor Yellow
-        $k = Read-Host -AsSecureString
-        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($k); try { $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+        $plain = Get-OpsSecret -Name 'ts-authkey'   # pre-seeded by Start-Run.ps1 (autonomous mode)
+        if (-not $plain) {
+            Write-Host '[HUMAN AT CONSOLE] Paste the Tailscale auth key (tskey-auth-...). Input hidden. Press Enter with no input to log in interactively via browser instead.' -ForegroundColor Yellow
+            $k = Read-Host -AsSecureString
+            $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($k); try { $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+        }
         if ($plain) { $upArgs += "--auth-key=$plain" }
     }
     Write-OpsLog -Component tailscale -Message "tailscale up (unattended, hostname=$($site['TS_HOSTNAME']), tags=$($site['TS_TAGS']))"
@@ -44,6 +48,7 @@ if ($state -ne 'Running') {
     $plain = $null; $upArgs = $null
     if ($LASTEXITCODE -ne 0) { throw "tailscale up failed (exit $LASTEXITCODE). If it printed a login URL, the human must open it; then re-run this script." }
     $changed += 'tailscale up --unattended'
+    Remove-Item (Get-OpsSecretPath 'ts-authkey') -Force -ErrorAction SilentlyContinue   # single-use; never keep it
 } else {
     # already up: make sure unattended is on (idempotent, no re-auth)
     & $exe set --unattended=true 2>$null | Out-Null

@@ -8,6 +8,15 @@ Your job: make OpenClaw (running inside WSL 2 on this laptop) remotely reachable
 self-healing, backed up, and reporting to Slack — by executing `RUNBOOK.md` phase by phase, using the
 scripts in `windows/` and `wsl/`. You are not here to design; the design is done (`ARCHITECTURE.md`).
 
+## Autonomous mode (default for the live run - fast)
+The human has already run `windows\Start-Run.ps1` (all secrets + names collected once). From here on **do not ask, do not pause between phases**:
+1. Run `.\windows\Run-All.ps1` (it executes Phases 0-4, auto-gates each, auto-verifies SSH and the UI from the laptop itself, prints a post-run checklist).
+2. If it stops with `Phase N gate failed`: read the FAIL lines + `logs\ops.log`, consult RUNBOOK "If something goes wrong", fix the cause, then `.\windows\Run-All.ps1 -From N`. Up to 3 fix attempts per phase before you escalate to the human.
+3. Only stop for a human when: a script prompts for a secret that intake did not store; a `wsl --shutdown` or reboot decision is needed; or 3 fix attempts failed.
+4. When Run-All finishes, print its post-run checklist verbatim and the final `PHASE 4 PASS` block. Then stop.
+Launch yourself without per-command approvals - the human starts you with `codex --dangerously-bypass-approvals-and-sandbox` or `claude --dangerously-skip-permissions`; if you were started without those, say so once and ask the human to relaunch rather than clicking through prompts.
+Everything below still applies (protected paths, secrets, scope). The phase-by-phase mode is the fallback when Run-All cannot proceed.
+
 ## Read order
 1. This file.
 2. `RUNBOOK.md` — find the **current phase** (`Get-Content C:\ProgramData\openclaw-ops\state.json` → `.phase`; if missing you are at Phase 0).
@@ -55,7 +64,7 @@ changed: <what you changed, one line each>
 verified: <gate checks that passed>
 open: <anything needing the human or the next session>
 ```
-Then stop and wait for the human to say "continue".
+In autonomous mode print this once at the end (Run-All prints per-phase gates itself). In phase-by-phase mode, stop and wait for "continue".
 
 ## What "done tonight" means
 - Both operators can `ssh <WIN_USER>@<TS_HOSTNAME>` over Tailscale and `wsl -d <DISTRO>` from there.

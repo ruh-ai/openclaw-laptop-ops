@@ -21,9 +21,11 @@ tests/                  acceptance matrix + fault injectors
 Set-ExecutionPolicy -Scope Process Bypass -Force
 irm https://raw.githubusercontent.com/ruh-ai/openclaw-laptop-ops/main/windows/bootstrap.ps1 | iex
 cd C:\openclaw-laptop-ops
-codex   # or: claude
-# > Read AGENTS.md and RUNBOOK.md. We are at Phase 0. Go.
+.\windows\Start-Run.ps1                                  # intake: every secret/name typed once
+codex --dangerously-bypass-approvals-and-sandbox         # or: claude --dangerously-skip-permissions
+# > Autonomous mode. Run .\windows\Run-All.ps1 -Reboot and fix anything that stops it.
 ```
+`Run-All.ps1` does Phases 0-4 without pausing and prints a post-run checklist for the checks that need your own machine (SSH in, pair the UI).
 
 ## Principles
 - Tailscale + SSH live on **Windows**; never a second Tailscale inside WSL. WSL is reached via Windows.
