@@ -38,14 +38,12 @@ if [ ! -f "$unit" ]; then log INFO "openclaw gateway install"; openclaw gateway 
 # Restart policy hardening (drop-in, never edit the generated unit)
 dropin="$HOME/.config/systemd/user/${OPENCLAW_SERVICE}.d"; mkdir -p "$dropin"
 cat > "$dropin/10-openclaw-ops.conf" <<'CONF'
-[Service]
-Restart=always
-RestartSec=5
-StartLimitIntervalSec=300
-StartLimitBurst=10
 [Unit]
 StartLimitIntervalSec=300
 StartLimitBurst=10
+[Service]
+Restart=always
+RestartSec=5
 CONF
 user_systemctl daemon-reload
 user_systemctl enable "$OPENCLAW_SERVICE" >/dev/null 2>&1 || true
@@ -56,7 +54,6 @@ user_systemctl restart "$OPENCLAW_SERVICE"
 for f in openclaw-ops-health.service openclaw-ops-health.timer; do sed "s#__REPO__#$OPS_REPO#g; s#__OPS_HOME__#$OPS_HOME#g" "$OPS_REPO/wsl/systemd/$f" > "$HOME/.config/systemd/user/$f"; done
 user_systemctl daemon-reload; user_systemctl enable --now openclaw-ops-health.timer >/dev/null
 
-for i in $(seq 1 12); do rpc_ok && break; sleep 5; done
-rpc_ok || { user_systemctl status "$OPENCLAW_SERVICE" --no-pager | tail -20; journalctl --user -u "$OPENCLAW_SERVICE" -n 40 --no-pager; die "gateway RPC not OK after start"; }
+wait_rpc 24 || { user_systemctl status "$OPENCLAW_SERVICE" --no-pager | tail -20; journalctl --user -u "$OPENCLAW_SERVICE" -n 40 --no-pager; die "gateway RPC not OK after start"; }
 log INFO "gateway service active, RPC ok, linger on"
 bash "$OPS_REPO/wsl/healthcheck.sh"

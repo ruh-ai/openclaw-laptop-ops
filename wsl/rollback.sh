@@ -9,5 +9,5 @@ tar -C "$OPENCLAW_HOME" -xzf "$d/openclaw-home-config.tgz"   # .env is never in 
 user_systemctl daemon-reload
 openclaw config validate >/dev/null 2>&1 || die "restored config does not validate"
 user_systemctl restart "$OPENCLAW_SERVICE"; sleep 6
-for i in 1 2 3 4 5 6; do rpc_ok && { log INFO "rollback OK"; echo "rolled back to $(basename "$d")"; exit 0; }; sleep 5; done
+wait_rpc 24 && { log INFO "rollback OK"; echo "rolled back to $(basename "$d")"; exit 0; }
 die "gateway not healthy after rollback"

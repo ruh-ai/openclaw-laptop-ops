@@ -21,6 +21,11 @@ die() { log ERROR "$*"; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 user_systemctl() { systemctl --user "$@"; }
 rpc_ok() { timeout 40 openclaw gateway status --require-rpc >/dev/null 2>&1; }
+wait_rpc() { # wait_rpc [tries] - service may need 1-2 min after restart before RPC answers
+  local tries="${1:-24}" i
+  for i in $(seq 1 "$tries"); do port_listening && rpc_ok && return 0; sleep 5; done
+  return 1
+}
 service_state() { user_systemctl is-active "$OPENCLAW_SERVICE" 2>/dev/null || true; }
 port_listening() { (exec 3<>/dev/tcp/127.0.0.1/"$GATEWAY_PORT") 2>/dev/null && exec 3>&- && return 0; return 1; }
 disk_used_pct() { df -P / | awk 'NR==2{gsub("%","",$5); print $5}'; }
