@@ -1,4 +1,4 @@
-<# Phase 0 — Discovery. Read-only. Writes %OPS_ROOT%\reports\discovery-<ts>.md + .json and proposes site.env values.
+﻿<# Phase 0 - Discovery. Read-only. Writes %OPS_ROOT%\reports\discovery-<ts>.md + .json and proposes site.env values.
    Nothing is changed on the machine except the report files. #>
 param([switch]$WriteSiteEnv)
 Import-Module (Join-Path $PSScriptRoot 'lib\Common.psm1') -Force

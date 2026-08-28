@@ -1,4 +1,4 @@
-<# Staged recovery. Called by Supervisor.ps1 after CONFIRM_FAILURES consecutive failed cycles. Honors RECOVERY_MODE:
+﻿<# Staged recovery. Called by Supervisor.ps1 after CONFIRM_FAILURES consecutive failed cycles. Honors RECOVERY_MODE:
    observe -> log + Slack only.   restart -> steps 1-3.   repair -> steps 1-4 (AI runner inside WSL as WSL_USER).
    Steps: 1 capture evidence  2 restart gateway (systemd)  3 restart WSL distro  4 rollback last-known-good  5 AI repair
    Each step re-checks health and stops at the first success. Returns the step that fixed it or 'failed'. #>
@@ -19,7 +19,7 @@ $failing = ($Health.critical -join ', ')
 Write-OpsLog -Level ALERT -Component recovery -Message "Confirmed failure: $failing (mode=$mode)"
 $ev = Evidence 'confirmed'
 Send-OpsSlack -Title 'Failure confirmed' -Text "Failing: $failing" -Severity danger -Fields @{ mode = $mode; evidence = $ev } | Out-Null
-if ($mode -eq 'observe') { Write-OpsLog -Component recovery -Message 'RECOVERY_MODE=observe — no action taken'; return 'observe' }
+if ($mode -eq 'observe') { Write-OpsLog -Component recovery -Message 'RECOVERY_MODE=observe - no action taken'; return 'observe' }
 
 # Step 2: restart gateway service
 if ((Test-WslRunning) -and ($Health.critical -contains 'gateway.service' -or $Health.critical -contains 'gateway.rpc' -or $Health.critical -contains 'gateway.port.windows')) {
@@ -42,12 +42,12 @@ if ($State.lastKnownGoodSnapshot) {
 }
 if ($mode -ne 'repair') { Send-OpsSlack -Title 'Recovery FAILED (restart mode; AI repair not enabled)' -Severity danger | Out-Null; return 'failed' }
 
-# Step 5: AI repair — rate limited
+# Step 5: AI repair - rate limited
 $hourAgo = (Get-Date).AddHours(-1)
 $recent = @($State.aiRepairs | Where-Object { [datetime]$_.ts -gt $hourAgo })
 if ($recent.Count -ge [int]$site['MAX_AI_REPAIRS_PER_HOUR']) {
-    Write-OpsLog -Level WARN -Component recovery -Message "AI repair limit reached ($($recent.Count)/h) — cooldown"
-    if (-not $State.cooldownUntil -or [datetime]$State.cooldownUntil -lt (Get-Date)) { $State.cooldownUntil = (Get-Date).AddMinutes([int]$site['AI_COOLDOWN_MIN']).ToString('o'); Send-OpsSlack -Title 'AI repair limit reached — cooldown started' -Text "until $($State.cooldownUntil)" -Severity danger | Out-Null }
+    Write-OpsLog -Level WARN -Component recovery -Message "AI repair limit reached ($($recent.Count)/h) - cooldown"
+    if (-not $State.cooldownUntil -or [datetime]$State.cooldownUntil -lt (Get-Date)) { $State.cooldownUntil = (Get-Date).AddMinutes([int]$site['AI_COOLDOWN_MIN']).ToString('o'); Send-OpsSlack -Title 'AI repair limit reached - cooldown started' -Text "until $($State.cooldownUntil)" -Severity danger | Out-Null }
     return 'cooldown'
 }
 if ($State.cooldownUntil -and [datetime]$State.cooldownUntil -gt (Get-Date)) { return 'cooldown' }
@@ -57,5 +57,5 @@ $State.aiRepairs = @($State.aiRepairs) + @(@{ ts = (Get-Date).ToString('o'); exi
 Write-OpsLog -Component recovery -Message "AI repair runner exit $($rr.ExitCode)"
 ($rr.Output) | Set-Content (Join-Path $ev 'ai-repair.log')
 if ($rr.ExitCode -eq 0 -and (Check)) { Send-OpsSlack -Title 'Recovered by AI repair' -Text ((Get-Content (Join-Path $ev 'ai-repair.log') -Tail 15) -join "`n") -Severity good | Out-Null; return 'ai-repair' }
-Send-OpsSlack -Title 'AI repair FAILED verification — rolled back' -Text ((Get-Content (Join-Path $ev 'ai-repair.log') -Tail 10 -ErrorAction SilentlyContinue) -join "`n") -Severity danger | Out-Null
+Send-OpsSlack -Title 'AI repair FAILED verification - rolled back' -Text ((Get-Content (Join-Path $ev 'ai-repair.log') -Tail 10 -ErrorAction SilentlyContinue) -join "`n") -Severity danger | Out-Null
 return 'failed'

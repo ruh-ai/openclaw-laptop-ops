@@ -1,4 +1,4 @@
-<# Make hooks.slack.com unresolvable via hosts file (supervisor must queue and later flush). -Revert restores. #>
+﻿<# Make hooks.slack.com unresolvable via hosts file (supervisor must queue and later flush). -Revert restores. #>
 param([switch]$Revert)
 $hosts = "$env:SystemRoot\System32\drivers\etc\hosts"; $marker = '# OpenClawOps-test-block-slack'
 $c = Get-Content $hosts | Where-Object { $_ -notmatch 'OpenClawOps-test-block-slack' }

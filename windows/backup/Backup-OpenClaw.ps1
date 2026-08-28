@@ -1,10 +1,10 @@
-<# Nightly application backup (also run once in Phase 4). Calls wsl/snapshot.sh --full which tars OpenClaw config,
+﻿<# Nightly application backup (also run once in Phase 4). Calls wsl/snapshot.sh --full which tars OpenClaw config,
    memory/skills/state, systemd units, ops scripts and version manifest (secrets EXCLUDED) into OPS_ROOT\backups\daily.
    Retention: BACKUP_DAILY_KEEP daily; every Sunday's copied into weekly (BACKUP_WEEKLY_KEEP). Refuses when disk > DISK_WARN_PCT. #>
 Import-Module (Join-Path $PSScriptRoot '..\lib\Common.psm1') -Force
 $site = Import-SiteConfig; Initialize-OpsRoot | Out-Null
 $c = Get-PSDrive C; $pct = [math]::Round(100 * $c.Used / ($c.Used + $c.Free))
-if ($pct -ge [int]$site['DISK_WARN_PCT']) { Write-OpsLog -Level ERROR -Component backup -Message "C: at $pct% — backup skipped"; Send-OpsSlack -Title 'Backup skipped: disk space' -Text "C: $pct% used" -Severity danger | Out-Null; exit 2 }
+if ($pct -ge [int]$site['DISK_WARN_PCT']) { Write-OpsLog -Level ERROR -Component backup -Message "C: at $pct% - backup skipped"; Send-OpsSlack -Title 'Backup skipped: disk space' -Text "C: $pct% used" -Severity danger | Out-Null; exit 2 }
 if (-not (Test-WslRunning)) { Start-Process 'wsl.exe' -ArgumentList @('-d', $site['DISTRO'], '--exec', 'dbus-launch', 'true') -WindowStyle Hidden -Wait; Start-Sleep 10 }
 $daily = Join-Path $site['OPS_ROOT_WIN'] 'backups\daily'; $weekly = Join-Path $site['OPS_ROOT_WIN'] 'backups\weekly'
 $r = Invoke-WslScript -Script 'wsl/snapshot.sh' -Arguments @('--full', (ConvertTo-WslPath $daily)) -TimeoutSec 900

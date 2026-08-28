@@ -1,4 +1,4 @@
-<# Store a secret with DPAPI (current user). MUST be run as WIN_USER — the account the scheduled tasks run as.
+﻿<# Store a secret with DPAPI (current user). MUST be run as WIN_USER - the account the scheduled tasks run as.
    Usage: .\windows\secrets\Set-OpsSecret.ps1 -Name slack        (prompts; paste the Slack incoming-webhook URL)
    Names in use: slack  #>
 param([Parameter(Mandatory)][ValidateSet('slack')][string]$Name)
@@ -13,5 +13,5 @@ $v = Read-Host -AsSecureString
 Set-OpsSecret -Name $Name -Value $v
 if ($Name -eq 'slack') {
     Write-Host 'Sending a test message...'
-    if (Send-OpsSlack -Title 'Slack webhook configured' -Text 'openclaw-laptop-ops can now report here.' -Severity good) { Write-Host 'OK' -ForegroundColor Green } else { Write-Host 'Send failed — check the URL and network; message queued.' -ForegroundColor Yellow }
+    if (Send-OpsSlack -Title 'Slack webhook configured' -Text 'openclaw-laptop-ops can now report here.' -Severity good) { Write-Host 'OK' -ForegroundColor Green } else { Write-Host 'Send failed - check the URL and network; message queued.' -ForegroundColor Yellow }
 }

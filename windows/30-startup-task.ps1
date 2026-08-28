@@ -1,4 +1,4 @@
-<# Phase 4a — Scheduled tasks (all run as WIN_USER, "whether user is logged on or not"). Idempotent.
+﻿<# Phase 4a - Scheduled tasks (all run as WIN_USER, "whether user is logged on or not"). Idempotent.
    OpenClawOps-WSLBoot        at startup (+30s)   wsl.exe -d DISTRO --exec dbus-launch true   (OpenClaw's documented keep-alive form)
    OpenClawOps-Supervisor     every SUPERVISOR_INTERVAL_MIN, also at startup   windows\supervisor\Supervisor.ps1
    OpenClawOps-BackupNightly  daily BACKUP_NIGHTLY_TIME                        windows\backup\Backup-OpenClaw.ps1
@@ -21,7 +21,7 @@ function Register($name, $action, $triggers, $limitMin) {
     $s = $settings; if ($limitMin) { $s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes $limitMin) }
     $existing = Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
     if ($existing) { Unregister-ScheduledTask -TaskName $name -Confirm:$false }
-    Register-ScheduledTask -TaskName $name -Action $action -Trigger $triggers -Settings $s -User $user -Password $pw -RunLevel Highest -Description 'openclaw-laptop-ops (PROTECTED — see AGENTS.md)' | Out-Null
+    Register-ScheduledTask -TaskName $name -Action $action -Trigger $triggers -Settings $s -User $user -Password $pw -RunLevel Highest -Description 'openclaw-laptop-ops (PROTECTED - see AGENTS.md)' | Out-Null
     $script:changed += "task $name $(if ($existing) { 'replaced' } else { 'created' })"
 }
 $boot = New-ScheduledTaskTrigger -AtStartup; $boot.Delay = 'PT30S'
@@ -45,5 +45,5 @@ Write-OpsLog -Component tasks -Message 'Scheduled tasks registered'
 # Smoke: run the supervisor once now
 Start-ScheduledTask -TaskName 'OpenClawOps-Supervisor'; Start-Sleep 20
 $last = (Get-ScheduledTaskInfo -TaskName 'OpenClawOps-Supervisor').LastTaskResult
-if ($last -eq 0 -or $last -eq 267009) { $verified += "supervisor ran (result $last)" } else { $open += "supervisor smoke run returned $last — check logs\ops.log" }
+if ($last -eq 0 -or $last -eq 267009) { $verified += "supervisor ran (result $last)" } else { $open += "supervisor smoke run returned $last - check logs\ops.log" }
 Write-PhaseResult -Phase 4 -Pass $false -Changed $changed -Verified $verified -Open ($open + @('Phase 4 gate: .\windows\90-verify.ps1 -Phase 4 then the live reboot test (RUNBOOK)'))

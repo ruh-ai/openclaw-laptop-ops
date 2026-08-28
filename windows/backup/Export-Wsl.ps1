@@ -1,10 +1,10 @@
-<# Weekly full WSL distro export (recoverable image). Verifies the tar lists and is non-trivial before pruning older exports.
+﻿<# Weekly full WSL distro export (recoverable image). Verifies the tar lists and is non-trivial before pruning older exports.
    Skips + Slack when free space < MIN_FREE_GB_FOR_EXPORT. Export runs while the distro is live (supported), ~minutes. #>
 Import-Module (Join-Path $PSScriptRoot '..\lib\Common.psm1') -Force
 $site = Import-SiteConfig; Initialize-OpsRoot | Out-Null
 $dir = Join-Path $site['OPS_ROOT_WIN'] 'backups\wsl-export'; New-Item -ItemType Directory -Path $dir -Force | Out-Null
 $free = [math]::Round((Get-PSDrive C).Free / 1GB, 1)
-if ($free -lt [int]$site['MIN_FREE_GB_FOR_EXPORT']) { Write-OpsLog -Level WARN -Component export -Message "only $free GB free — export skipped"; Send-OpsSlack -Title 'WSL export skipped: low disk' -Text "$free GB free on C:" -Severity warning | Out-Null; exit 2 }
+if ($free -lt [int]$site['MIN_FREE_GB_FOR_EXPORT']) { Write-OpsLog -Level WARN -Component export -Message "only $free GB free - export skipped"; Send-OpsSlack -Title 'WSL export skipped: low disk' -Text "$free GB free on C:" -Severity warning | Out-Null; exit 2 }
 $file = Join-Path $dir "$($site['DISTRO'])-$(Get-Date -Format yyyyMMdd-HHmm).tar"
 Write-OpsLog -Component export -Message "wsl --export $($site['DISTRO']) -> $file"
 & wsl.exe --export $site['DISTRO'] $file 2>&1 | Out-Null

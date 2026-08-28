@@ -1,5 +1,5 @@
-<# =====================================================================================
- bootstrap.ps1 — FIRST thing to run on the laptop (elevated PowerShell). Idempotent.
+﻿<# =====================================================================================
+ bootstrap.ps1 - FIRST thing to run on the laptop (elevated PowerShell). Idempotent.
    1. winget: Git, Node LTS (needed for codex/claude CLIs and OpenClaw tooling)
    2. Clone/refresh this repo to REPO_DIR_WIN using a read-only GitHub PAT typed live (private repo)
    3. Create %OPS_ROOT_WIN% tree with restricted ACL
@@ -61,7 +61,7 @@ if (-not $SkipAgents) {
 
 Step 'site.env'
 $siteEnv = Join-Path $RepoDir 'config\site.env'
-if (-not (Test-Path $siteEnv)) { Copy-Item (Join-Path $RepoDir 'config\site.env.example') $siteEnv; Write-Host '  created from example — Phase 0 fills it in' } else { Write-Host '  exists' }
+if (-not (Test-Path $siteEnv)) { Copy-Item (Join-Path $RepoDir 'config\site.env.example') $siteEnv; Write-Host '  created from example - Phase 0 fills it in' } else { Write-Host '  exists' }
 
 Write-Host "`nBootstrap complete. Next:" -ForegroundColor Green
 Write-Host "  cd $RepoDir"

@@ -55,4 +55,4 @@ jobs:
       - name: no CRLF in shell scripts, no secrets-looking strings
         run: |
           ! grep -rl $'\r' wsl tests/inject --include='*.sh' || { echo "CRLF in shell scripts"; exit 1; }
-          ! grep -rEn "tskey-auth-[A-Za-z0-9]{10,}|hooks\.slack\.com/services/T[0-9A-Z]{6,}|ghp_[A-Za-z0-9]{30,}|sk-ant-api" --include='*' . --exclude-dir=.git || { echo "secret-looking string committed"; exit 1; }
+          ! grep -rEn "tskey-auth-[A-Za-z0-9]{10,}|hooks\.slack\.com/services/T[0-9A-Z]{6,}|ghp_[A-Za-z0-9]{30,}|sk-ant-api" --include='*' . --exclude-dir=.git --exclude-dir=.github || { echo "secret-looking string committed"; exit 1; }

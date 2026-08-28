@@ -1,4 +1,4 @@
-<# Phase 4b — Windows resilience settings. Idempotent. Only touches AC (plugged-in) behaviour. #>
+﻿<# Phase 4b - Windows resilience settings. Idempotent. Only touches AC (plugged-in) behaviour. #>
 Import-Module (Join-Path $PSScriptRoot 'lib\Common.psm1') -Force
 Assert-Admin
 $site = Import-SiteConfig
@@ -26,4 +26,4 @@ $au = 'HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings'
 if (Test-Path $au) { Set-ItemProperty $au -Name ActiveHoursStart -Value 8 -Type DWord; Set-ItemProperty $au -Name ActiveHoursEnd -Value 18 -Type DWord; $changed += 'update active hours 08-18' }
 $verified += (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE | Select-String 'AC Power Setting Index').ToString().Trim()
 Write-OpsLog -Component power -Message ($changed -join '; ')
-Write-PhaseResult -Phase 4 -Pass $false -Changed $changed -Verified $verified -Open @('Firmware "power on after AC loss" is a BIOS setting — human, if supported', 'Windows Update may still reboot within the maintenance window; the boot sequence must recover (reboot test)')
+Write-PhaseResult -Phase 4 -Pass $false -Changed $changed -Verified $verified -Open @('Firmware "power on after AC loss" is a BIOS setting - human, if supported', 'Windows Update may still reboot within the maintenance window; the boot sequence must recover (reboot test)')

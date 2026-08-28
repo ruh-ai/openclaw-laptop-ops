@@ -1,4 +1,4 @@
-<# Phase 1b — Windows OpenSSH Server, reachable ONLY over Tailscale. Idempotent.
+﻿<# Phase 1b - Windows OpenSSH Server, reachable ONLY over Tailscale. Idempotent.
    - installs OpenSSH.Server capability, sshd Automatic + service recovery
    - default shell PowerShell
    - local group SSH_GROUP; WIN_USER added; operator keys from config\operators\*.pub
@@ -32,19 +32,19 @@ if ($site['WIN_USER'] -and -not (Get-LocalGroupMember -Group $grp -Member $site[
 # Keys: every config\operators\*.pub -> authorized for WIN_USER (the account both operators use to reach WSL).
 # Separate Windows accounts per operator are supported: name the file <windowsuser>.pub and create that local user (+group) by hand; the script routes it.
 $pubs = Get-ChildItem (Join-Path (Get-RepoRoot) 'config\operators\*.pub') -ErrorAction SilentlyContinue
-if (-not $pubs) { $open += 'No operator keys in config\operators\*.pub — SSH will be password-only until keys are added' }
+if (-not $pubs) { $open += 'No operator keys in config\operators\*.pub - SSH will be password-only until keys are added' }
 $adminKeys = Join-Path $env:ProgramData 'ssh\administrators_authorized_keys'
 $adminSet = New-Object System.Collections.Generic.List[string]
 foreach ($f in $pubs) {
     $key = (Get-Content $f -Raw).Trim()
-    if ($key -notmatch '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp\d+|sk-ssh-ed25519@openssh\.com) ') { $open += "$($f.Name) does not look like an OpenSSH public key — skipped"; continue }
+    if ($key -notmatch '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp\d+|sk-ssh-ed25519@openssh\.com) ') { $open += "$($f.Name) does not look like an OpenSSH public key - skipped"; continue }
     $target = $f.BaseName
     $user = if (Get-LocalUser -Name $target -ErrorAction SilentlyContinue) { $target } else { $site['WIN_USER'] }
     $isAdmin = [bool](Get-LocalGroupMember -Group Administrators -Member $user -ErrorAction SilentlyContinue)
     if ($isAdmin) { $adminSet.Add("$key $($f.BaseName)") }
     else {
         $profileDir = (Get-CimInstance Win32_UserProfile | Where-Object { $_.LocalPath -like "*\$user" }).LocalPath
-        if (-not $profileDir) { $open += "no profile dir for $user — log in once, then re-run"; continue }
+        if (-not $profileDir) { $open += "no profile dir for $user - log in once, then re-run"; continue }
         $ak = Join-Path $profileDir '.ssh\authorized_keys'; New-Item -ItemType Directory -Path (Split-Path $ak) -Force | Out-Null
         if (-not (Test-Path $ak) -or -not ((Get-Content $ak -Raw) -match [regex]::Escape($key))) { Add-Content $ak "$key $($f.BaseName)"; $changed += "key $($f.Name) -> $ak" }
     }
@@ -60,7 +60,7 @@ if ($adminSet.Count) {
 # sshd_config drop-in via managed block
 $cfg = Join-Path $env:ProgramData 'ssh\sshd_config'
 $block = @"
-# BEGIN OpenClawOps (managed by windows\11-openssh.ps1 — do not edit by hand)
+# BEGIN OpenClawOps (managed by windows\11-openssh.ps1 - do not edit by hand)
 Port $($site['SSH_PORT'])
 PubkeyAuthentication yes
 PasswordAuthentication $(if ($DisablePassword) { 'no' } else { 'yes' })

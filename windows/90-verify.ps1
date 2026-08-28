@@ -1,4 +1,4 @@
-<# Phase gates. Exit 0 = PASS. Prints every check. -Watch repeats every 30s until Ctrl+C (for reboot tests from a second device).
+﻿<# Phase gates. Exit 0 = PASS. Prints every check. -Watch repeats every 30s until Ctrl+C (for reboot tests from a second device).
    Phase 1: Tailscale Running + sshd listening + firewall scoped + (human-confirmed) remote SSH   -ConfirmRemoteSsh to record the human's confirmation
    Phase 2: WSL running, PID1 systemd, gateway service active, RPC ok, localhost forwarding
    Phase 3: Serve configured, TS_URL responds, allowedOrigins set, (human-confirmed) UI pairs from second device  -ConfirmUiPaired
@@ -45,7 +45,7 @@ function Run-Gate {
 }
 do {
     $res = Run-Gate
-    Clear-Host; Write-Host "Gate check — Phase $Phase — $(Get-Date -Format u)" -ForegroundColor Cyan
+    Clear-Host; Write-Host "Gate check - Phase $Phase - $(Get-Date -Format u)" -ForegroundColor Cyan
     foreach ($r in $res) { Write-Host ("{0} {1,-34} {2}" -f $(if ($r.ok) { 'PASS' } else { 'FAIL' }), $r.check, $r.detail) -ForegroundColor $(if ($r.ok) { 'Green' } else { 'Red' }) }
     $pass = -not ($res | Where-Object { -not $_.ok })
     Write-Host ("`nPHASE $Phase {0}" -f $(if ($pass) { 'PASS' } else { 'FAIL' })) -ForegroundColor $(if ($pass) { 'Green' } else { 'Red' })

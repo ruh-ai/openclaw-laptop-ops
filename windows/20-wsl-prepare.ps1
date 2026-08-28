@@ -1,4 +1,4 @@
-<# Phase 2a — WSL 2 runtime standardisation. Idempotent.
+﻿<# Phase 2a - WSL 2 runtime standardisation. Idempotent.
    - WSL up to date (wsl --update), DISTRO exists and is version 2
    - %USERPROFILE%\.wslconfig managed block: localhostForwarding, vmIdleTimeout, memory  (NAT mode kept; mirrored not required)
    - /etc/wsl.conf: [boot] systemd=true ; [user] default=WSL_USER
@@ -17,13 +17,13 @@ if ($list -match "(?m)^\s*\*?\s*$([regex]::Escape($distro))\s+\S+\s+1\s*$") { th
 try { & wsl.exe --update 2>&1 | Out-Null } catch {}
 $verified += "distro $distro present (WSL2)"
 
-# .wslconfig (user-scope of WIN_USER — run this script as WIN_USER)
+# .wslconfig (user-scope of WIN_USER - run this script as WIN_USER)
 $wslcfg = Join-Path $env:USERPROFILE '.wslconfig'
 $idle = $site['WSL_VM_IDLE_TIMEOUT_MS']; $mem = $site['WSL_MEMORY']
 $block = "# BEGIN OpenClawOps (managed by windows\20-wsl-prepare.ps1)`n[wsl2]`nlocalhostForwarding=true`nvmIdleTimeout=$idle`n" + $(if ($mem) { "memory=$mem`n" } else { '' }) + "# END OpenClawOps`n"
 $raw = if (Test-Path $wslcfg) { Get-Content $wslcfg -Raw } else { '' }
 if ($raw -match '(?s)# BEGIN OpenClawOps.*?# END OpenClawOps\r?\n?') { $new = $raw -replace '(?s)# BEGIN OpenClawOps.*?# END OpenClawOps\r?\n?', ($block -replace '\$', '$$$$') }
-else { if ($raw -match '(?m)^\[wsl2\]') { $open += ".wslconfig already has a [wsl2] section outside our block — merge by hand: $wslcfg" }; $new = $block + $raw }
+else { if ($raw -match '(?m)^\[wsl2\]') { $open += ".wslconfig already has a [wsl2] section outside our block - merge by hand: $wslcfg" }; $new = $block + $raw }
 if ($new -ne $raw) { Set-Content $wslcfg $new -Encoding ascii; $changed += ".wslconfig managed block (vmIdleTimeout=$idle)" }
 
 # Inside the distro, as root
@@ -66,7 +66,7 @@ if ($r.Output -notmatch 'pid1=systemd') {
     & wsl.exe --terminate $distro | Out-Null; Start-Sleep 10
     $chk = Invoke-WslBash -Command 'ps -p 1 -o comm=' -AsRoot -TimeoutSec 120
     if ($chk.Output -match 'systemd') { $verified += 'PID 1 = systemd'; $changed += 'distro restarted' }
-    else { $open += "systemd still not PID 1 after restart (got '$($chk.Output.Trim())'). WSL may need 'wsl --shutdown' (stops ALL distros) — human decision, then re-run." }
+    else { $open += "systemd still not PID 1 after restart (got '$($chk.Output.Trim())'). WSL may need 'wsl --shutdown' (stops ALL distros) - human decision, then re-run." }
 } else { $verified += 'PID 1 = systemd' }
 
 $lin = Invoke-WslBash -Command "loginctl show-user '$wuser' -p Linger --value 2>/dev/null || echo unknown" -AsRoot

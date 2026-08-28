@@ -1,4 +1,4 @@
-<# Returns a structured health object (also dot-sourced by Supervisor and 90-verify). Read-only.
+﻿<# Returns a structured health object (also dot-sourced by Supervisor and 90-verify). Read-only.
    Usage: .\windows\supervisor\HealthCheck.ps1 [-Json] [-Deep]   (-Deep adds TS_URL probe + disk + AI auth) #>
 param([switch]$Json, [switch]$Deep)
 Import-Module (Join-Path $PSScriptRoot '..\lib\Common.psm1') -Force

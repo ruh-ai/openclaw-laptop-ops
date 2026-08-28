@@ -1,8 +1,8 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   Shared library for openclaw-laptop-ops Windows scripts.
-  PROTECTED after Phase 1 — see AGENTS.md rule 2.
+  PROTECTED after Phase 1 - see AGENTS.md rule 2.
 
   Contract:
     Import-SiteConfig            -> hashtable of config/site.env (+ derived keys), also $global:Site
@@ -157,7 +157,7 @@ function Send-OpsSlack {
     $emoji = switch ($Severity) { 'good' { ':white_check_mark:' } 'warning' { ':warning:' } 'danger' { ':rotating_light:' } default { ':information_source:' } }
     $body = "$emoji *[$site]* $Title"
     if ($Text) { $body += "`n$Text" }
-    if ($Fields) { $body += "`n" + (($Fields.GetEnumerator() | ForEach-Object { "• *$($_.Key)*: $($_.Value)" }) -join "`n") }
+    if ($Fields) { $body += "`n" + (($Fields.GetEnumerator() | ForEach-Object { "* *$($_.Key)*: $($_.Value)" }) -join "`n") }
     $payload = @{ text = $body } | ConvertTo-Json -Compress -Depth 4
     $queue = Join-Path $global:Site['OPS_ROOT_WIN'] 'queue\slack-queue.jsonl'
     $hook = Get-OpsSecret -Name slack
@@ -202,8 +202,8 @@ function Enter-OpsLock {
             $alive = Get-Process -Id $info.pid -ErrorAction SilentlyContinue
             $age = (Get-Date) - [datetime]$info.ts
             if ($alive -and $age.TotalMinutes -lt $StaleMinutes) { return $false }
-            Write-OpsLog -Level WARN -Component lock -Message "Stale lock '$Name' (pid $($info.pid), age $([int]$age.TotalMinutes)m) — taking over"
-        } catch { Write-OpsLog -Level WARN -Component lock -Message "Unreadable lock '$Name' — taking over" }
+            Write-OpsLog -Level WARN -Component lock -Message "Stale lock '$Name' (pid $($info.pid), age $([int]$age.TotalMinutes)m) - taking over"
+        } catch { Write-OpsLog -Level WARN -Component lock -Message "Unreadable lock '$Name' - taking over" }
     }
     @{ pid = $PID; ts = (Get-Date).ToString('o'); host = $env:COMPUTERNAME } | ConvertTo-Json -Compress | Set-Content -Path $path -Encoding UTF8
     return $true
@@ -232,7 +232,7 @@ function Set-OpsState { param([Parameter(Mandatory)]$State)
 # ---------------- WSL ----------------
 function Invoke-WslBash {
     <# Run a bash command inside DISTRO. Returns @{ExitCode; Output}. Login shell so PATH (~/.local/bin, npm) is loaded.
-       The command is written to a temp file under OPS_ROOT\queue and executed by path — no Windows/bash quoting games. #>
+       The command is written to a temp file under OPS_ROOT\queue and executed by path - no Windows/bash quoting games. #>
     param(
         [Parameter(Mandatory)][string]$Command,
         [switch]$AsRoot,
