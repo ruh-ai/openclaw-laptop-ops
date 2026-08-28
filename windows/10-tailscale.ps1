@@ -13,8 +13,17 @@ $changed = @(); $verified = @(); $open = @()
 
 $exe = Get-TailscaleExe
 if (-not $exe) {
-    Write-OpsLog -Component tailscale -Message 'Installing Tailscale via winget'
-    winget install --id Tailscale.Tailscale --exact --silent --accept-package-agreements --accept-source-agreements | Out-Null
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-OpsLog -Component tailscale -Message 'Installing Tailscale via winget'
+        winget install --id Tailscale.Tailscale --exact --silent --accept-package-agreements --accept-source-agreements | Out-Null
+    } else {
+        Write-OpsLog -Component tailscale -Message 'Installing Tailscale via MSI (no winget)'
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $msi = Join-Path $env:TEMP 'tailscale-setup.msi'
+        Invoke-WebRequest 'https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi' -OutFile $msi -UseBasicParsing
+        Start-Process msiexec.exe -ArgumentList '/i', $msi, '/qn', '/norestart' -Wait
+        Remove-Item $msi -Force
+    }
     Start-Sleep 5; $exe = Get-TailscaleExe
     if (-not $exe) { throw 'Tailscale install did not produce tailscale.exe. Install manually from https://tailscale.com/download/windows and re-run.' }
     $changed += 'Tailscale installed'
