@@ -34,6 +34,25 @@ jobs:
           $missing = $need | Where-Object { -not (Get-Command $_ -Module Common -ErrorAction SilentlyContinue) }
           if ($missing) { throw "Common.psm1 missing exports: $($missing -join ', ')" }
           Write-Host "Common.psm1 exports OK"
+      - name: Exec smoke of read-only scripts under PS 5.1 (fail on thrown errors only, not on unhealthy exit codes)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Copy-Item config\site.env.example config\site.env
+          Write-Host "== 00-discovery.ps1"
+          & .\windows\00-discovery.ps1
+          $rep = Get-ChildItem C:\ProgramData\openclaw-ops\reports\discovery-*.md | Select-Object -First 1
+          if (-not $rep) { throw 'discovery produced no report' }
+          Write-Host "report: $($rep.Name) ($([math]::Round($rep.Length/1KB)) KB)"
+          Write-Host "== HealthCheck.ps1 -Json -Deep"
+          $json = & .\windows\supervisor\HealthCheck.ps1 -Json -Deep
+          $h = $json | ConvertFrom-Json
+          Write-Host "healthy=$($h.healthy) checks=$(@($h.checks.PSObject.Properties).Count) critical=$($h.critical -join ',')"
+          if (@($h.checks.PSObject.Properties).Count -lt 8) { throw 'health object too small' }
+          Write-Host "== 90-verify.ps1 -Phase 1 (expected FAIL on a runner; must not throw)"
+          & .\windows\90-verify.ps1 -Phase 1 | Out-Null
+          Write-Host "verify exit=$LASTEXITCODE (1 expected)"
+          Remove-Item config\site.env
       - name: PSScriptAnalyzer (errors fail; warnings reported)
         shell: pwsh
         run: |

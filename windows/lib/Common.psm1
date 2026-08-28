@@ -268,7 +268,8 @@ function Invoke-WslScript {
     return Invoke-WslBash -Command "$envPrefix bash '$repoWsl/$Script' $quoted" -AsRoot:$AsRoot -TimeoutSec $TimeoutSec
 }
 function Test-WslRunning { param([string]$Distro = $global:Site['DISTRO'])
-    $out = (& wsl.exe --list --running 2>$null) -replace "`0", ''
+    if (-not (Get-Command wsl.exe -ErrorAction SilentlyContinue)) { return $false }
+    try { $out = ((@(& wsl.exe --list --running 2>$null) | ForEach-Object { "$_" }) -join "`n") -replace "`0", '' } catch { return $false }
     return [bool]($out -match [regex]::Escape($Distro))
 }
 
