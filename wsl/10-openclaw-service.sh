@@ -13,7 +13,11 @@ if ! have openclaw; then
   case "${OPS_OPENCLAW_INSTALL:-installer}" in
     existing) die "OPS_OPENCLAW_INSTALL=existing but 'openclaw' not on PATH for $(id -un). Fix PATH or set method to installer/npm." ;;
     npm) have npm || die "npm missing; install Node 22 first (sudo apt-get install -y nodejs npm, or nvm)"; npm install -g openclaw@latest ;;
-    *) log INFO "installing OpenClaw via official installer"; curl -fsSL https://openclaw.ai/install.sh | bash ;;
+    *) log INFO "installing OpenClaw via official installer"
+       # sanitized env: our OPS_*/OPENCLAW_* site variables must not leak into the installer (it reads its own OPENCLAW_* envs)
+       curl -fsSL https://openclaw.ai/install.sh -o /tmp/openclaw-install.sh
+       env -i HOME="$HOME" USER="$(id -un)" LOGNAME="$(id -un)" SHELL=/bin/bash PATH="/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin" TERM=dumb bash /tmp/openclaw-install.sh
+       rm -f /tmp/openclaw-install.sh ;;
   esac
   hash -r; have openclaw || { export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"; hash -r; }
   have openclaw || die "openclaw still not on PATH after install; open a new login shell and re-run"
