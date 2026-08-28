@@ -75,9 +75,17 @@ MaxAuthTries 4
 $raw = if (Test-Path $cfg) { Get-Content $cfg -Raw } else { '' }
 $new = if ($raw -match '(?s)# BEGIN OpenClawOps.*?# END OpenClawOps\r?\n?') { $raw -replace '(?s)# BEGIN OpenClawOps.*?# END OpenClawOps\r?\n?', ($block -replace '\$', '$$$$') } else { $block + "`r`n" + $raw }
 if ($new -ne $raw) {
-    # comment out the stock Match Group administrators block so our AllowGroups/AuthorizedKeysFile logic is unambiguous
     Set-Content -Path $cfg -Value $new -Encoding ascii
-    Restart-Service sshd; $changed += 'sshd_config managed block written; sshd restarted'
+    # validate BEFORE restarting - a broken sshd_config means losing SSH access entirely
+    $sshdExe = Join-Path $env:SystemRoot 'System32\OpenSSH\sshd.exe'
+    $t = & $sshdExe -t -f $cfg 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Set-Content -Path $cfg -Value $raw -Encoding ascii
+        throw "sshd_config failed validation; original restored. sshd -t said: $t"
+    }
+    Restart-Service sshd; $changed += 'sshd_config managed block written (validated); sshd restarted'
+    Start-Sleep 2
+    if ((Get-Service sshd).Status -ne 'Running') { Set-Content -Path $cfg -Value $raw -Encoding ascii; Start-Service sshd; throw 'sshd failed to start with the new config; original restored and sshd restarted' }
 }
 
 # Firewall: tailnet only
