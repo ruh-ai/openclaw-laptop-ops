@@ -12,14 +12,14 @@ if ($ConfirmRemoteSsh) { $state.humanConfirmedRemoteSsh = (Get-Date).ToString('o
 if ($ConfirmUiPaired) { $state.humanConfirmedUiPaired = (Get-Date).ToString('o'); Set-OpsState $state }
 function Run-Gate {
     $res = New-Object System.Collections.Generic.List[object]
-    function G($name, $ok, $detail) { $res.Add([pscustomobject]@{ check = $name; ok = [bool]$ok; detail = "$detail" }) }
+    function G($name, $ok, $detail, [switch]$Advisory) { $res.Add([pscustomobject]@{ check = $name; ok = [bool]$ok; advisory = [bool]$Advisory; detail = "$detail" }) }
     $h = & (Join-Path $PSScriptRoot 'supervisor\HealthCheck.ps1') -Json -Deep | ConvertFrom-Json
     function HC($n) { $c = $h.checks.$n; if ($c) { G $n $c.ok $c.detail } else { G $n $false 'no data' } }
     if ($Phase -ge 1) {
         HC 'tailscale.service'; HC 'tailscale.backend'; HC 'sshd'
         $fw = Get-NetFirewallRule -Name 'OpenClawOps-SSH-Tailnet' -ErrorAction SilentlyContinue; G 'firewall.ssh.tailnet-only' ($fw -and $fw.Enabled -eq 'True' -and (Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue).Enabled -ne 'True') 'OpenClawOps-SSH-Tailnet on, stock rule off'
+        $tv = $h.checks.teamviewer; G 'teamviewer.fallback' ($tv -and $tv.ok) "$(if($tv){$tv.detail}else{'no data'}) (advisory)" -Advisory
         G 'ssh.reachable' ([bool]$state.humanConfirmedRemoteSsh -or [bool]$state.autoVerifiedSelfSsh) "$(if($state.humanConfirmedRemoteSsh){"remote, human-confirmed $($state.humanConfirmedRemoteSsh)"}elseif($state.autoVerifiedSelfSsh){"self-SSH over tailnet IP auto-verified $($state.autoVerifiedSelfSsh); remote check is on the post-run list"}else{'run Run-All.ps1 (auto) or 90-verify.ps1 -Phase 1 -ConfirmRemoteSsh after ssh from a 2nd device'})"
-        HC 'teamviewer'
     }
     if ($Phase -ge 2) { HC 'wsl.running'; HC 'wsl.systemd'; HC 'gateway.service'; HC 'gateway.rpc'; HC 'gateway.port.windows'
         $lin = Invoke-WslBash -Command "loginctl show-user '$($site['WSL_USER'])' -p Linger --value" -AsRoot; G 'wsl.linger' ($lin.Output -match 'yes') $lin.Output.Trim()
@@ -46,8 +46,8 @@ function Run-Gate {
 do {
     $res = Run-Gate
     Clear-Host; Write-Host "Gate check - Phase $Phase - $(Get-Date -Format u)" -ForegroundColor Cyan
-    foreach ($r in $res) { Write-Host ("{0} {1,-34} {2}" -f $(if ($r.ok) { 'PASS' } else { 'FAIL' }), $r.check, $r.detail) -ForegroundColor $(if ($r.ok) { 'Green' } else { 'Red' }) }
-    $pass = -not ($res | Where-Object { -not $_.ok })
+    foreach ($r in $res) { $tag = if ($r.ok) { 'PASS' } elseif ($r.advisory) { 'WARN' } else { 'FAIL' }; Write-Host ("{0} {1,-34} {2}" -f $tag, $r.check, $r.detail) -ForegroundColor $(if ($r.ok) { 'Green' } elseif ($r.advisory) { 'Yellow' } else { 'Red' }) }
+    $pass = -not ($res | Where-Object { -not $_.ok -and -not $_.advisory })
     Write-Host ("`nPHASE $Phase {0}" -f $(if ($pass) { 'PASS' } else { 'FAIL' })) -ForegroundColor $(if ($pass) { 'Green' } else { 'Red' })
     if ($pass) { $s = Get-OpsState; if ([int]$s.phase -lt $Phase) { $s.phase = $Phase; Set-OpsState $s }; Write-OpsLog -Component gate -Message "Phase $Phase PASS" }
     if ($Watch) { Start-Sleep 30 }

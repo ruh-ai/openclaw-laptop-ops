@@ -109,7 +109,7 @@ Every script prints `PHASE n PASS|FAIL / changed / verified / open`. In the fast
 | `tailscale up` prints a login URL | human opens it, approves device, re-run `10-tailscale.ps1` |
 | Serve: "HTTPS not enabled" | admin console → DNS → enable HTTPS certificates; re-run `12-tailscale-serve.ps1` |
 | `wsl --terminate` didn't give systemd | human: `wsl --shutdown` (all distros) then re-run `20-wsl-prepare.ps1` |
-| `wsl --install -d Ubuntu-24.04` says "Invalid distribution name" or "parameter is incorrect" | old in-box WSL (Server 2022 / older Win10): `wsl --install --no-distribution --web-download`, reboot, verify `wsl --version` works, then `wsl --install -d Ubuntu-24.04 --no-launch` (dry-run-verified 2026-08-28) |
+| `wsl --install -d Ubuntu-24.04` says "Invalid distribution name" or "parameter is incorrect" | old in-box WSL (Server 2022 / older Win10): `wsl --install --no-distribution --web-download`, reboot, verify `wsl --version` works, then `wsl --install -d Ubuntu-24.04 --no-launch` (error signature verified 2026-08-28; the upgrade path is Microsoft's documented one but was not run to completion in the dry run) |
 | `openclaw gateway install` fails | check `openclaw doctor`; older OpenClaw → `wsl/10-openclaw-service.sh` needs `OPENCLAW_INSTALL_METHOD=npm` + `npm i -g openclaw@latest` (human decision to upgrade) |
 | Gate 2: port not reachable from Windows | `wsl --shutdown` to apply `.wslconfig`; confirm `bind=loopback`; check Windows Firewall isn't blocking loopback (it doesn't) |
 | UI loads, pairing rejected | Phase 3 step 3 (trustedProxies) |
