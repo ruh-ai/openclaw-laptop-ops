@@ -1,0 +1,58 @@
+name: lint
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse all PowerShell with Windows PowerShell 5.1 (the target runtime)
+        shell: powershell
+        run: |
+          $files = Get-ChildItem -Recurse -Include *.ps1,*.psm1 | Sort-Object FullName
+          $bad = 0
+          foreach ($f in $files) {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            $rel = Resolve-Path -Relative $f.FullName
+            if ($errors.Count) { $bad++; Write-Host "FAIL $rel"; $errors | ForEach-Object { Write-Host ("   L{0}:{1} {2}" -f $_.Extent.StartLineNumber, $_.Extent.StartColumnNumber, $_.Message) } }
+            else { Write-Host "ok   $rel" }
+          }
+          Write-Host "files=$($files.Count) bad=$bad"
+          if ($bad) { exit 1 }
+      - name: Module import + site.env parse smoke (PS 5.1)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module .\windows\lib\Common.psm1 -Force
+          $site = Import-SiteConfig -AllowExample
+          if ($site['GATEWAY_PORT'] -ne '18789') { throw "GATEWAY_PORT parsed as '$($site['GATEWAY_PORT'])'" }
+          if ($site['REPO_DIR_WSL'] -notlike '/mnt/c/*') { throw "REPO_DIR_WSL derived as '$($site['REPO_DIR_WSL'])'" }
+          if ($site['OPS_ROOT_WIN'] -ne 'C:\ProgramData\openclaw-ops') { throw "OPS_ROOT_WIN parsed as '$($site['OPS_ROOT_WIN'])'" }
+          Write-Host "site.env example parses: $($site.Count) keys; TS_URL='$($site['TS_URL'])'"
+          # every script must at least dot-load its param block: run with -WhatIf-less syntax check via AST already; here we check Common exports
+          $need = 'Import-SiteConfig','Initialize-OpsRoot','Write-OpsLog','Set-OpsSecret','Get-OpsSecret','Send-OpsSlack','Flush-OpsSlackQueue','Enter-OpsLock','Exit-OpsLock','Get-OpsState','Set-OpsState','Invoke-WslBash','Invoke-WslScript','Test-WslRunning','Get-TailscaleExe','Test-TcpPort','Test-HttpOk','Write-PhaseResult','ConvertTo-WslPath','Assert-Admin'
+          $missing = $need | Where-Object { -not (Get-Command $_ -Module Common -ErrorAction SilentlyContinue) }
+          if ($missing) { throw "Common.psm1 missing exports: $($missing -join ', ')" }
+          Write-Host "Common.psm1 exports OK"
+      - name: PSScriptAnalyzer (errors fail; warnings reported)
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+          $r = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost,PSAvoidUsingPlainTextForPassword,PSUseShouldProcessForStateChangingFunctions,PSAvoidUsingConvertToSecureStringWithPlainText,PSUseSingularNouns,PSAvoidGlobalVars
+          $r | Format-Table -AutoSize RuleName, Severity, ScriptName, Line, Message | Out-String -Width 220 | Write-Host
+          if ($r | Where-Object Severity -eq 'Error') { exit 1 }
+  bash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n + shellcheck
+        run: |
+          set -e
+          for f in wsl/*.sh wsl/repair/*.sh tests/inject/*.sh; do bash -n "$f"; done
+          sudo apt-get install -y -qq shellcheck >/dev/null
+          shellcheck -S warning -e SC1091,SC2034,SC2155 wsl/*.sh wsl/repair/*.sh tests/inject/*.sh || true
+          echo "bash syntax OK"
+      - name: no CRLF in shell scripts, no secrets-looking strings
+        run: |
+          ! grep -rl $'\r' wsl tests/inject --include='*.sh' || { echo "CRLF in shell scripts"; exit 1; }
+          ! grep -rEn "tskey-auth-[A-Za-z0-9]{10,}|hooks\.slack\.com/services/T[0-9A-Z]{6,}|ghp_[A-Za-z0-9]{30,}|sk-ant-api" --include='*' . --exclude-dir=.git || { echo "secret-looking string committed"; exit 1; }
