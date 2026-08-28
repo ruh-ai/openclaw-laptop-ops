@@ -42,7 +42,12 @@ PY
 fi
 if ! openclaw config validate >/dev/null 2>&1; then cp -p "$bak" "$cfg"; openclaw config validate 2>&1 | tail -5; die "config failed validation — previous file restored from $bak"; fi
 user_systemctl restart "$OPENCLAW_SERVICE"; sleep 6
-for i in 1 2 3 4 5 6; do rpc_ok && break; sleep 5; done
-rpc_ok || { journalctl --user -u "$OPENCLAW_SERVICE" -n 40 --no-pager; cp -p "$bak" "$cfg"; user_systemctl restart "$OPENCLAW_SERVICE"; die "gateway unhealthy after hardening — config restored from $bak"; }
+for i in $(seq 1 12); do rpc_ok && break; sleep 5; done
+if ! rpc_ok; then
+  log WARN "RPC not OK after first restart; one more restart then extended wait"
+  user_systemctl restart "$OPENCLAW_SERVICE"; sleep 8
+  for i in $(seq 1 8); do rpc_ok && break; sleep 5; done
+fi
+rpc_ok || { journalctl --user -u "$OPENCLAW_SERVICE" -n 40 --no-pager; cp -p "$bak" "$cfg"; user_systemctl restart "$OPENCLAW_SERVICE"; die "gateway unhealthy after hardening - config restored from $bak"; }
 log INFO "hardened: token auth, loopback, allowTailscale=false${origin:+, origin $origin}${proxy:+, trustedProxy $proxy}"
 echo "VERIFY-ON-SITE: if UI pairing from the tailnet fails with a proxy/origin rejection, run: journalctl --user -u $OPENCLAW_SERVICE -n 100 | grep -iE 'proxy|origin|forward' and re-run with --trusted-proxy=<observed peer ip>"

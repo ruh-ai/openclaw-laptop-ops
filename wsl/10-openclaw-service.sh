@@ -48,13 +48,15 @@ StartLimitIntervalSec=300
 StartLimitBurst=10
 CONF
 user_systemctl daemon-reload
-user_systemctl enable --now "$OPENCLAW_SERVICE" >/dev/null 2>&1 || user_systemctl restart "$OPENCLAW_SERVICE"
+user_systemctl enable "$OPENCLAW_SERVICE" >/dev/null 2>&1 || true
+# unconditional restart: the service may be running with stale config/.env from before this script ran
+user_systemctl restart "$OPENCLAW_SERVICE"
 
 # local health timer
 for f in openclaw-ops-health.service openclaw-ops-health.timer; do sed "s#__REPO__#$OPS_REPO#g; s#__OPS_HOME__#$OPS_HOME#g" "$OPS_REPO/wsl/systemd/$f" > "$HOME/.config/systemd/user/$f"; done
 user_systemctl daemon-reload; user_systemctl enable --now openclaw-ops-health.timer >/dev/null
 
-for i in 1 2 3 4 5 6; do rpc_ok && break; sleep 5; done
+for i in $(seq 1 12); do rpc_ok && break; sleep 5; done
 rpc_ok || { user_systemctl status "$OPENCLAW_SERVICE" --no-pager | tail -20; journalctl --user -u "$OPENCLAW_SERVICE" -n 40 --no-pager; die "gateway RPC not OK after start"; }
 log INFO "gateway service active, RPC ok, linger on"
 bash "$OPS_REPO/wsl/healthcheck.sh"
