@@ -60,7 +60,7 @@ $m = [regex]::Matches($distroList, '(?m)^\s*\*?\s*(\S+)\s+(Running|Stopped)\s+(\
 if ($m.Count -ge 1) { $proposed['DISTRO'] = $m[0].Groups[1].Value }
 $tsj = $rep['tailscale']; if ($tsj -is [System.Collections.IDictionary] -and $tsj.status -match '"MagicDNSSuffix":\s*"([^"]+)"') { $proposed['TS_TAILNET'] = $Matches[1] }
 $inside = "$($rep['wsl.inside'])"
-if ($inside -match 'openclaw_home=(\S+) \(user (\S+)\)') { $proposed['OPENCLAW_HOME'] = $Matches[1]; $proposed['WSL_USER'] = $Matches[2]; $proposed['WSL_HOME'] = (Split-Path $Matches[1] -Parent) -replace '\\', '/'; $proposed['OPENCLAW_INSTALL_METHOD'] = 'existing' }
+if ($inside -match 'openclaw_home=(\S+) \(user (\S+)\)') { $proposed['OPENCLAW_HOME'] = $Matches[1]; $proposed['WSL_USER'] = $Matches[2]; $proposed['WSL_HOME'] = (Split-Path $Matches[1] -Parent) -replace '\\', '/'; $proposed['OPS_OPENCLAW_INSTALL'] = 'existing' }
 Write-Host "`nProposed site.env values (verify each against the report before accepting):" -ForegroundColor Cyan
 $proposed.GetEnumerator() | ForEach-Object { Write-Host ("  {0}={1}" -f $_.Key, $_.Value) }
 if ($WriteSiteEnv) {

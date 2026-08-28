@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 2b — OpenClaw installed (unless OPENCLAW_INSTALL_METHOD=existing) and running as a systemd --user service with linger.
+# Phase 2b — OpenClaw installed (unless OPS_OPENCLAW_INSTALL=existing) and running as a systemd --user service with linger.
 # Runs as WSL_USER. Idempotent. Also installs the local health timer (wsl/systemd/*).
 source "$(dirname "$0")/lib.sh"
 [ "$(id -un)" = "${WSL_USER:-$(id -un)}" ] || die "must run as $WSL_USER (got $(id -un))"
@@ -10,8 +10,8 @@ user_systemctl is-system-running --quiet 2>/dev/null || user_systemctl list-unit
 loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null | grep -q yes || { sudo -n loginctl enable-linger "$(id -un)" && log INFO "linger enabled"; }
 
 if ! have openclaw; then
-  case "${OPENCLAW_INSTALL_METHOD:-installer}" in
-    existing) die "OPENCLAW_INSTALL_METHOD=existing but 'openclaw' not on PATH for $(id -un). Fix PATH or set method to installer/npm." ;;
+  case "${OPS_OPENCLAW_INSTALL:-installer}" in
+    existing) die "OPS_OPENCLAW_INSTALL=existing but 'openclaw' not on PATH for $(id -un). Fix PATH or set method to installer/npm." ;;
     npm) have npm || die "npm missing; install Node 22 first (sudo apt-get install -y nodejs npm, or nvm)"; npm install -g openclaw@latest ;;
     *) log INFO "installing OpenClaw via official installer"; curl -fsSL https://openclaw.ai/install.sh | bash ;;
   esac

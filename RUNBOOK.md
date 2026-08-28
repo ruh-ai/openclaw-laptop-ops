@@ -52,7 +52,7 @@ Every script prints `PHASE n PASS|FAIL / changed / verified / open`. In the fast
    Fallback if `irm` is blocked: copy `windows\bootstrap.ps1` via TeamViewer file transfer and run `powershell -ExecutionPolicy Bypass -File .\bootstrap.ps1`.
 2. `cd C:\openclaw-laptop-ops` then start the agent: `codex` (or `claude`). First prompt: *"Read AGENTS.md and RUNBOOK.md. We are at Phase 0. Go."*
 3. Agent: `.\windows\00-discovery.ps1 -WriteSiteEnv` → read the report path it prints; open `config\site.env` and verify each `VERIFY-ON-SITE` value against the report:
-   `WIN_USER` (must own the distro — `wsl.registryOwner`), `DISTRO` (exact), `WSL_USER`/`OPENCLAW_HOME`/`OPENCLAW_INSTALL_METHOD` (existing install? which user owns `~/.openclaw`?), `TS_HOSTNAME` (choose), `SITE_NAME`.
+   `WIN_USER` (must own the distro — `wsl.registryOwner`), `DISTRO` (exact), `WSL_USER`/`OPENCLAW_HOME`/`OPS_OPENCLAW_INSTALL` (existing install? which user owns `~/.openclaw`?), `TS_HOSTNAME` (choose), `SITE_NAME`.
    If OpenClaw is already installed under a different Linux user than `WSL_USER`, set `WSL_USER` to that user — do not migrate tonight.
 4. Safety snapshot before any change: `.\windows\backup\Export-Wsl.ps1` (full distro export; needs `MIN_FREE_GB_FOR_EXPORT`) and, if OpenClaw exists, `.\windows\Invoke-WslScript.ps1 -Script wsl/snapshot.sh` (config snapshot — WSL_USER must exist; skip if not).
    If systemd is not PID 1 yet, `snapshot.sh` still works (it only tars files).
@@ -110,7 +110,7 @@ Every script prints `PHASE n PASS|FAIL / changed / verified / open`. In the fast
 | Serve: "HTTPS not enabled" | admin console → DNS → enable HTTPS certificates; re-run `12-tailscale-serve.ps1` |
 | `wsl --terminate` didn't give systemd | human: `wsl --shutdown` (all distros) then re-run `20-wsl-prepare.ps1` |
 | `wsl --install -d Ubuntu-24.04` says "Invalid distribution name" or "parameter is incorrect" | old in-box WSL (Server 2022 / older Win10): `wsl --install --no-distribution --web-download`, reboot, verify `wsl --version` works, then `wsl --install -d Ubuntu-24.04 --no-launch` (error signature verified 2026-08-28; the upgrade path is Microsoft's documented one but was not run to completion in the dry run) |
-| `openclaw gateway install` fails | check `openclaw doctor`; older OpenClaw → `wsl/10-openclaw-service.sh` needs `OPENCLAW_INSTALL_METHOD=npm` + `npm i -g openclaw@latest` (human decision to upgrade) |
+| `openclaw gateway install` fails | check `openclaw doctor`; older OpenClaw → `wsl/10-openclaw-service.sh` needs `OPS_OPENCLAW_INSTALL=npm` + `npm i -g openclaw@latest` (human decision to upgrade) |
 | Gate 2: port not reachable from Windows | `wsl --shutdown` to apply `.wslconfig`; confirm `bind=loopback`; check Windows Firewall isn't blocking loopback (it doesn't) |
 | UI loads, pairing rejected | Phase 3 step 3 (trustedProxies) |
 | Scheduled task fails with 0x800710E0 / logon failure | password typo or "log on as batch job" right missing for `WIN_USER`: `secpol.msc` → User Rights → Log on as a batch job |
