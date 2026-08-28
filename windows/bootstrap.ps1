@@ -19,11 +19,29 @@ function Step($m) { Write-Host "`n==> $m" -ForegroundColor Cyan }
 $id = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not (New-Object Security.Principal.WindowsPrincipal $id).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Run this in an elevated PowerShell.' }
 
-Step 'Tooling via winget (Git, Node LTS)'
-if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw 'winget not found. Install "App Installer" from Microsoft Store, then re-run.' }
-foreach ($pkg in @('Git.Git', 'OpenJS.NodeJS.LTS')) {
-    $have = winget list --id $pkg --exact 2>$null | Select-String $pkg
-    if ($have) { Write-Host "  $pkg present" } else { winget install --id $pkg --exact --silent --accept-package-agreements --accept-source-agreements | Out-Null; Write-Host "  $pkg installed" }
+Step 'Tooling (Git, Node LTS)'
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    foreach ($pkg in @('Git.Git', 'OpenJS.NodeJS.LTS')) {
+        $have = winget list --id $pkg --exact 2>$null | Select-String $pkg
+        if ($have) { Write-Host "  $pkg present" } else { winget install --id $pkg --exact --silent --accept-package-agreements --accept-source-agreements | Out-Null; Write-Host "  $pkg installed" }
+    }
+} else {
+    # No winget (Windows Server, older Win10): direct silent installers
+    Write-Host '  winget not found - using direct installers' -ForegroundColor Yellow
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        $gitUrl = ((Invoke-RestMethod 'https://api.github.com/repos/git-for-windows/git/releases/latest').assets | Where-Object name -like '*64-bit.exe' | Select-Object -First 1).browser_download_url
+        $gitExe = Join-Path $env:TEMP 'git-setup.exe'; Invoke-WebRequest $gitUrl -OutFile $gitExe -UseBasicParsing
+        Start-Process $gitExe -ArgumentList '/VERYSILENT', '/NORESTART', '/NOCANCEL', '/SP-' -Wait; Remove-Item $gitExe -Force
+        Write-Host '  Git installed'
+    } else { Write-Host '  git present' }
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        $idx = Invoke-RestMethod 'https://nodejs.org/dist/index.json'
+        $lts = ($idx | Where-Object { $_.lts } | Select-Object -First 1).version
+        $msi = Join-Path $env:TEMP 'node-lts.msi'; Invoke-WebRequest "https://nodejs.org/dist/$lts/node-$lts-x64.msi" -OutFile $msi -UseBasicParsing
+        Start-Process msiexec.exe -ArgumentList '/i', $msi, '/qn', '/norestart' -Wait; Remove-Item $msi -Force
+        Write-Host "  Node $lts installed"
+    } else { Write-Host '  node present' }
 }
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 
