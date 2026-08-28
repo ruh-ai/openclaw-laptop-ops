@@ -53,6 +53,8 @@ jobs:
           & .\windows\90-verify.ps1 -Phase 1 | Out-Null
           Write-Host "verify exit=$LASTEXITCODE (1 expected)"
           Remove-Item config\site.env
+          $global:LASTEXITCODE = 0   # the runner shell propagates the last native exit code; the scripts ran without throwing, which is what this step asserts
+          exit 0
       - name: PSScriptAnalyzer (errors fail; warnings reported)
         shell: pwsh
         run: |

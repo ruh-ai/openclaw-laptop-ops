@@ -17,7 +17,9 @@ Every script prints `PHASE n PASS|FAIL / changed / verified / open`. **Stop afte
 
 ---
 
-## Before the call (Ruh engineer, on your own machine)
+## Before the call (Ruh engineer, on your own machine) - in this order
+- [ ] **Operator SSH public keys committed** under `config/operators/` (needed before the laptop clones):
+      `cp ~/.ssh/id_ed25519.pub config/operators/prasanjit.pub` (plus the second developer's key) -> commit -> push. Public keys only.
 - [ ] Tailscale admin console: **MagicDNS on**, **HTTPS certificates on** (DNS tab); ACL includes `tag:openclaw-laptop` + operators (see `config/tailscale-acl.example.hujson`); generate an **auth key**: reusable=no, ephemeral=no, pre-approved=yes, tags=`tag:openclaw-laptop`. Keep it in your password manager; you'll type it once.
 - [ ] Both operators' SSH public keys committed under `config/operators/` (see its README).
 - [ ] Slack: create an incoming webhook for the alert channel. Keep the URL ready to type.
@@ -31,7 +33,8 @@ Every script prints `PHASE n PASS|FAIL / changed / verified / open`. **Stop afte
    Set-ExecutionPolicy -Scope Process Bypass -Force
    irm https://raw.githubusercontent.com/ruh-ai/openclaw-laptop-ops/main/windows/bootstrap.ps1 -Headers @{Authorization="Bearer $(Read-Host 'GitHub PAT')"} | iex
    ```
-   (Private repo: the PAT is read once for the raw download, then bootstrap asks for it again for `git clone`, then strips it from the remote URL.)
+   (Private repo: the PAT is read once for the raw download, then bootstrap asks for it again for `git clone`, then strips it from the remote URL.
+   Verified 2026-08-28 against this repo: raw.githubusercontent.com accepts `Authorization: Bearer <token>` (and `token <token>`); the clone URL form `https://x-access-token:<token>@github.com/ruh-ai/openclaw-laptop-ops` works.)
    Fallback if `irm` is blocked: copy `windows\bootstrap.ps1` via TeamViewer file transfer and run `powershell -ExecutionPolicy Bypass -File .\bootstrap.ps1`.
 2. `cd C:\openclaw-laptop-ops` then start the agent: `codex` (or `claude`). First prompt: *"Read AGENTS.md and RUNBOOK.md. We are at Phase 0. Go."*
 3. Agent: `.\windows\00-discovery.ps1 -WriteSiteEnv` → read the report path it prints; open `config\site.env` and verify each `VERIFY-ON-SITE` value against the report:
